@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sapporo 2026 | Full Itinerary & Photo Support</title>
+    <title>Sapporo 2026 | Ultimate Companion</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -19,7 +19,7 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(0,0,0,0.9); 
+            background: rgba(0,0,0,0.85); 
             z-index: 10000; 
             flex-direction: column; 
             align-items: center; 
@@ -27,22 +27,22 @@
             color: white; 
         }
         .img-gradient { background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.8)); }
-        .event-img-container { position: relative; width: 100%; max-height: 250px; border-radius: 1.25rem; overflow: hidden; margin-top: 0.75rem; border: 1px solid #eee; }
+        .event-img-container { position: relative; width: 100%; max-height: 200px; border-radius: 1rem; overflow: hidden; margin-top: 0.75rem; border: 1px solid #eee; background: #f9f9f9; }
         .timeline-dot { position: absolute; left: 12px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: #0984e3; border: 2px solid white; z-index: 20; }
     </style>
 </head>
 <body class="bg-[#F8F9FA] text-[#2D3436] pb-24">
 
-    <!-- 全局載入遮罩 -->
+    <!-- 載入遮罩 -->
     <div id="loading-overlay">
-        <div class="relative w-16 h-16 mb-4">
+        <div class="relative w-12 h-12 mb-4">
             <div class="absolute inset-0 border-4 border-white/10 rounded-full"></div>
             <div class="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
-        <p class="font-black text-sm tracking-widest uppercase">影像壓縮與優化中...</p>
+        <p class="font-black text-xs tracking-widest uppercase">處理中...</p>
     </div>
 
-    <!-- 隱藏的輸入框 -->
+    <!-- 隱藏輸入 -->
     <input type="file" id="banner-img-input" class="hidden" accept="image/*">
     <input type="file" id="event-img-input" class="hidden" accept="image/*">
     <input type="file" id="lib-file-input" class="hidden" accept="application/pdf,image/*">
@@ -56,19 +56,19 @@
             <div>
                 <h1 class="text-sm font-black tracking-tight mb-1">Sapporo 2026</h1>
                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                    <i class="fas fa-check-circle text-blue-500"></i> FEB 16 - FEB 22
+                    <i class="fas fa-calendar-alt text-blue-500"></i> FEB 16 - FEB 22
                 </p>
             </div>
         </div>
         <div class="flex gap-2">
-            <button onclick="resetData()" class="px-2 py-2 text-gray-300 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
+            <button onclick="resetData()" class="px-2 py-2 text-gray-300"><i class="fas fa-trash-alt"></i></button>
             <button id="edit-btn" onclick="toggleEdit()" class="px-4 py-2 bg-[#2D3436] text-white rounded-xl font-black text-[11px] shadow-md flex items-center gap-2 active:scale-95 transition-all">
                 <i class="fas fa-edit"></i> <span>編輯模式</span>
             </button>
         </div>
     </header>
 
-    <!-- Tab 導航 -->
+    <!-- Tab 導覽 -->
     <nav class="flex px-6 pt-4 gap-8 border-b border-gray-100 bg-white sticky top-[73px] z-40">
         <button onclick="switchTab('itinerary')" id="tab-itinerary" class="pb-3 text-[11px] font-black uppercase tracking-widest relative text-[#2D3436]">
             行程導航
@@ -82,16 +82,16 @@
 
     <main class="p-4 max-w-2xl mx-auto space-y-6">
         
-        <!-- 行程導航內容 -->
+        <!-- 行程內容 -->
         <section id="content-itinerary" class="space-y-6 animate-fade">
-            <!-- 匯率與天氣 -->
+            <!-- 工具卡片 (天氣/匯率) -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
                     <div>
                         <p class="text-[9px] font-black text-gray-400 uppercase">札幌天氣</p>
                         <p id="weather-display" class="text-sm font-black text-blue-600">載入中...</p>
                     </div>
-                    <div id="weather-icon"><i class="fas fa-cloud-sun text-blue-100 text-lg"></i></div>
+                    <div id="weather-icon"><i class="fas fa-snowflake text-blue-100 text-lg"></i></div>
                 </div>
                 <div class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm">
                     <p class="text-[9px] font-black text-gray-400 uppercase mb-2">JPY ↔ HKD (0.052)</p>
@@ -105,13 +105,13 @@
             <!-- 日期選擇器 -->
             <div class="flex gap-3 overflow-x-auto no-scrollbar py-2" id="day-selector"></div>
 
-            <!-- 當日詳情 -->
+            <!-- 行程詳情 -->
             <div id="day-details" class="bg-white rounded-[2.5rem] overflow-hidden shadow-xl border border-gray-100">
                 <div id="day-banner" class="h-56 relative bg-gray-200">
                     <img id="day-img" src="" class="w-full h-full object-cover">
                     <div class="absolute inset-0 img-gradient"></div>
                     
-                    <button id="banner-upload-btn" onclick="document.getElementById('banner-img-input').click()" class="hidden absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md border border-white/30 rounded-full text-white flex items-center justify-center active:scale-95">
+                    <button id="banner-upload-btn" onclick="document.getElementById('banner-img-input').click()" class="hidden absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md border border-white/30 rounded-full text-white flex items-center justify-center">
                         <i class="fas fa-camera"></i>
                     </button>
 
@@ -121,19 +121,17 @@
                             <div id="day-title-container"></div>
                         </div>
                         <div class="text-right">
-                            <p class="text-[9px] font-bold opacity-70">預算總計</p>
+                            <p class="text-[9px] font-bold opacity-70">當日預算</p>
                             <p id="day-budget" class="text-xl font-black">¥ 0</p>
                         </div>
                     </div>
                 </div>
                 
                 <div class="p-8">
-                    <div id="timeline" class="space-y-12 relative">
-                        <!-- 行程項目 -->
-                    </div>
+                    <div id="timeline" class="space-y-12 relative"></div>
                     <div id="add-event-container" class="hidden mt-10">
                         <button onclick="addEvent()" class="w-full py-4 border-2 border-dashed border-gray-200 rounded-3xl text-gray-400 font-black text-xs">
-                            <i class="fas fa-plus mr-2"></i> 新增行程項目 (Time Range)
+                            <i class="fas fa-plus mr-2"></i> 新增行程項目
                         </button>
                     </div>
                 </div>
@@ -145,8 +143,11 @@
             <!-- 文件管理 -->
             <div class="bg-[#2D3436] p-6 rounded-[2.5rem] shadow-xl text-white">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-lg font-black tracking-tight">文件圖庫</h2>
-                    <button id="add-doc-btn" onclick="document.getElementById('lib-file-input').click()" class="hidden px-5 py-2.5 bg-white text-black rounded-xl text-[10px] font-black">上傳 PDF/圖片</button>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-folder-open text-blue-400"></i>
+                        <h2 class="text-lg font-black tracking-tight">文件圖庫 (PDF/圖片)</h2>
+                    </div>
+                    <button id="add-doc-btn" onclick="document.getElementById('lib-file-input').click()" class="hidden px-5 py-2.5 bg-white text-black rounded-xl text-[10px] font-black">上傳文件</button>
                 </div>
                 <div id="document-list" class="grid grid-cols-1 gap-3"></div>
             </div>
@@ -154,7 +155,10 @@
             <!-- 重要連結 -->
             <div class="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-black tracking-tight">重要連結</h2>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-link text-blue-500"></i>
+                        <h2 class="text-xl font-black tracking-tight">重要連結</h2>
+                    </div>
                     <button id="add-link-btn" onclick="addLink()" class="hidden px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black">新增連結</button>
                 </div>
                 <div id="link-list" class="space-y-3"></div>
@@ -163,7 +167,10 @@
             <!-- 出發準備 -->
             <div class="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-black tracking-tight">出發準備</h2>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-clipboard-list text-orange-500"></i>
+                        <h2 class="text-xl font-black tracking-tight">出發準備</h2>
+                    </div>
                     <button id="add-check-btn" onclick="addCheckItem()" class="hidden px-4 py-2 bg-orange-50 text-orange-600 rounded-xl text-[10px] font-black">新增項目</button>
                 </div>
                 <div id="checklist" class="space-y-3"></div>
@@ -172,32 +179,31 @@
     </main>
 
     <script>
-        const STORE_KEY = 'SAPPORO_V11_FULL_ITINERARY';
+        const STORE_KEY = 'SAPPORO_V13_EVENT_IMGS';
         const exchangeRate = 0.052;
         let currentDayIdx = 0;
         let isEditing = false;
-        let pendingEventIdx = -1;
+        let activeEventIdx = null; // 用於追蹤正在上傳圖片的行程項目
 
-        // 預設 16-22 日行程結構
         const defaultData = {
             itinerary: [
-                { date: "2/16", weekday: "MON", title: "啟程 · 札幌初雪", img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=1000", events: [{ timeFrom: "15:00", timeTo: "16:30", loc: "新千歲機場", desc: "抵達後搭乘 JR 快速 Airport 號。", icon: "fa-plane-arrival", color: "text-blue-500", cost: 1150, mapUrl: "https://www.google.com/maps/search/?api=1&query=New+Chitose+Airport", eventImg: "" }] },
-                { date: "2/17", weekday: "TUE", title: "音樂決賽日", img: "https://images.unsplash.com/photo-1520529688591-b213eb5ee9a3?w=1000", events: [] },
+                { date: "2/16", weekday: "MON", title: "啟程 · 札幌初雪", img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=1000", events: [{ timeFrom: "15:00", timeTo: "16:30", loc: "新千歲機場", desc: "抵達後搭乘 JR 快速 Airport 號。", cost: 1150, eventImg: "" }] },
+                { date: "2/17", weekday: "TUE", title: "音樂決賽日 @ Sun Plaza", img: "https://images.unsplash.com/photo-1520529688591-b213eb5ee9a3?w=1000", events: [] },
                 { date: "2/18", weekday: "WED", title: "小樽浪漫漫步", img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1000", events: [] },
-                { date: "2/19", weekday: "THU", title: "滑雪體驗", img: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=1000", events: [] },
+                { date: "2/19", weekday: "THU", title: "札幌國際滑雪場", img: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=1000", events: [] },
                 { date: "2/20", weekday: "FRI", title: "頒獎禮 @ Kitara", img: "https://images.unsplash.com/photo-1507838596357-01242f2105a9?w=1000", events: [] },
-                { date: "2/21", weekday: "SAT", title: "破冰船一日團", img: "https://images.unsplash.com/photo-1480497490787-505ec076689f?w=1000", events: [] },
-                { date: "2/22", weekday: "SUN", title: "返程 · 二条市場", img: "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=1000", events: [] }
+                { date: "2/21", weekday: "SAT", title: "網走破冰船一日遊", img: "https://images.unsplash.com/photo-1480497490787-505ec076689f?w=1000", events: [] },
+                { date: "2/22", weekday: "SUN", title: "二条市場 · 歸國", img: "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=1000", events: [] }
             ],
-            checklist: [{ task: "保暖鞋墊", done: false }, { task: "護照與簽證", done: true }, { task: "比賽用譜", done: true }],
+            checklist: [{ task: "保暖鞋墊 (便利店買)", done: false }, { task: "護照及文件", done: true }],
             links: [{ title: "JR 北海道時刻表", url: "https://www.jrhokkaido.co.jp/" }],
             documents: []
         };
 
         let appData = JSON.parse(JSON.stringify(defaultData));
 
-        // --- 核心圖片壓縮處理 ---
-        async function smartCompress(base64, maxWidth = 1024, quality = 0.7) {
+        // --- 圖片處理引擎 ---
+        async function smartCompress(base64, maxWidth = 1000, quality = 0.7) {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.src = base64;
@@ -213,45 +219,50 @@
             });
         }
 
-        // --- 上傳邏輯 ---
-        document.getElementById('banner-img-input').onchange = e => {
-            const file = e.target.files[0]; if (!file) return;
+        // 行程項目圖上傳處理
+        document.getElementById('event-img-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || activeEventIdx === null) return;
             showLoading(true);
             const reader = new FileReader();
-            reader.onload = async ev => {
-                appData.itinerary[currentDayIdx].img = await smartCompress(ev.target.result, 1200, 0.6);
+            reader.onload = async (ev) => {
+                const compressed = await smartCompress(ev.target.result, 800, 0.6);
+                appData.itinerary[currentDayIdx].events[activeEventIdx].eventImg = compressed;
                 saveData(); renderDay(currentDayIdx); showLoading(false);
             };
             reader.readAsDataURL(file);
-        };
+        });
 
-        function triggerEventPhoto(idx) { pendingEventIdx = idx; document.getElementById('event-img-input').click(); }
-        document.getElementById('event-img-input').onchange = e => {
-            const file = e.target.files[0]; if (!file || pendingEventIdx === -1) return;
+        // Banner 圖上傳處理
+        document.getElementById('banner-img-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
             showLoading(true);
             const reader = new FileReader();
-            reader.onload = async ev => {
-                appData.itinerary[currentDayIdx].events[pendingEventIdx].eventImg = await smartCompress(ev.target.result, 800, 0.7);
+            reader.onload = async (ev) => {
+                const compressed = await smartCompress(ev.target.result);
+                appData.itinerary[currentDayIdx].img = compressed;
                 saveData(); renderDay(currentDayIdx); showLoading(false);
-                pendingEventIdx = -1;
             };
             reader.readAsDataURL(file);
-        };
+        });
 
-        document.getElementById('lib-file-input').onchange = e => {
-            const file = e.target.files[0]; if (!file) return;
+        // 文件圖庫上傳處理
+        document.getElementById('lib-file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
             showLoading(true);
             const reader = new FileReader();
-            reader.onload = async ev => {
-                let data = ev.target.result;
-                if (file.type.startsWith('image/')) data = await smartCompress(data, 1200, 0.6);
-                appData.documents.push({ name: file.name, data, date: new Date().toLocaleDateString(), type: file.type });
+            reader.onload = async (ev) => {
+                let finalData = ev.target.result;
+                if (file.type.startsWith('image/')) finalData = await smartCompress(finalData);
+                appData.documents.push({ name: file.name, data: finalData, type: file.type, date: new Date().toLocaleDateString() });
                 saveData(); renderDocuments(); showLoading(false);
             };
             reader.readAsDataURL(file);
-        };
+        });
 
-        // --- 渲染函數 ---
+        // --- 介面渲染 ---
         function renderDay(idx) {
             currentDayIdx = idx;
             const day = appData.itinerary[idx];
@@ -272,36 +283,38 @@
             day.events.forEach((ev, i) => {
                 if (isEditing) {
                     timeline.innerHTML += `
-                    <div class="relative pl-10 bg-gray-50 p-4 rounded-3xl border border-gray-100 animate-fade">
+                    <div class="relative pl-10 bg-gray-50 p-4 rounded-3xl border border-gray-100 mb-4 animate-fade">
                         <div class="flex gap-2 mb-2">
                             <input type="time" oninput="appData.itinerary[${idx}].events[${i}].timeFrom=this.value" value="${ev.timeFrom||''}" class="flex-1 text-[10px] p-2 border rounded">
-                            <span class="text-gray-300">to</span>
                             <input type="time" oninput="appData.itinerary[${idx}].events[${i}].timeTo=this.value" value="${ev.timeTo||''}" class="flex-1 text-[10px] p-2 border rounded">
                             <input type="number" oninput="appData.itinerary[${idx}].events[${i}].cost=this.value" value="${ev.cost}" placeholder="¥" class="w-20 text-[10px] p-2 border rounded">
                         </div>
-                        <input type="text" oninput="appData.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" placeholder="地點" class="w-full text-sm font-black mb-2 p-2 border rounded">
-                        <input type="text" oninput="appData.itinerary[${idx}].events[${i}].mapUrl=this.value" value="${ev.mapUrl||''}" placeholder="Google Maps 網址" class="w-full text-[9px] mb-2 p-2 border rounded">
-                        <div class="flex gap-2 mb-2">
-                            <button onclick="triggerEventPhoto(${i})" class="flex-1 py-2 bg-blue-50 text-blue-600 rounded-xl text-[9px] font-black"><i class="fas fa-camera mr-1"></i> 上傳項目圖</button>
-                            ${ev.eventImg ? `<button onclick="appData.itinerary[${idx}].events[${i}].eventImg='';renderDay(${idx})" class="px-3 bg-red-50 text-red-400 rounded-xl text-[9px]"><i class="fas fa-times"></i></button>` : ''}
+                        <input type="text" oninput="appData.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" class="w-full text-sm font-black mb-2 p-2 border rounded" placeholder="地點名稱">
+                        <textarea oninput="appData.itinerary[${idx}].events[${i}].desc=this.value" class="w-full text-[10px] p-2 border rounded h-16 outline-none" placeholder="備註內容">${ev.desc}</textarea>
+                        
+                        <div class="flex gap-4 mt-3">
+                            <button onclick="activeEventIdx=${i};document.getElementById('event-img-input').click()" class="text-[9px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1">
+                                <i class="fas fa-camera"></i> ${ev.eventImg ? '更換配圖' : '加入項目圖'}
+                            </button>
+                            <button onclick="appData.itinerary[${idx}].events.splice(${i},1);renderDay(${idx})" class="text-[9px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1">
+                                <i class="fas fa-trash-alt"></i> 刪除項目
+                            </button>
                         </div>
-                        ${ev.eventImg ? `<img src="${ev.eventImg}" class="w-full h-32 object-cover rounded-xl mb-2">` : ''}
-                        <textarea oninput="appData.itinerary[${idx}].events[${i}].desc=this.value" class="w-full text-[10px] p-2 border rounded h-16">${ev.desc}</textarea>
-                        <button onclick="appData.itinerary[${idx}].events.splice(${i},1);renderDay(${idx})" class="text-[9px] font-black text-red-500 mt-2">刪除此項目</button>
+                        ${ev.eventImg ? `<div class="event-img-container mt-2 opacity-50 grayscale"><img src="${ev.eventImg}" class="w-full h-full object-cover"></div>` : ''}
                     </div>`;
                 } else {
-                    const timeStr = (ev.timeFrom || ev.timeTo) ? `${ev.timeFrom || '--:--'} — ${ev.timeTo || '--:--'}` : '';
                     timeline.innerHTML += `
                     <div class="relative pl-12 animate-fade">
-                        <div class="timeline-dot shadow-sm"></div>
+                        <div class="timeline-dot"></div>
                         <div>
-                            <p class="text-[10px] font-black text-gray-400 mb-0.5 tracking-wide uppercase">${timeStr}</p>
-                            <a href="${ev.mapUrl || '#'}" target="_blank" class="font-black text-sm text-[#2D3436] hover:text-blue-500 transition-colors inline-flex items-center gap-1.5">
-                                ${ev.loc} ${ev.mapUrl ? '<i class="fas fa-external-link-alt text-[9px] opacity-30"></i>' : ''}
-                            </a>
-                            <p class="text-[11px] text-gray-500 mt-1 leading-relaxed">${ev.desc}</p>
-                            ${ev.eventImg ? `<div class="event-img-container shadow-sm"><img src="${ev.eventImg}" class="w-full h-full object-cover" onclick="window.open(this.src)"></div>` : ''}
-                            <div class="mt-2 text-[9px] font-black text-blue-500 bg-blue-50 inline-block px-2.5 py-0.5 rounded-full uppercase tracking-tighter">Budget: ¥ ${parseInt(ev.cost).toLocaleString()}</div>
+                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">${ev.timeFrom || '--:--'} ${ev.timeTo ? `— ${ev.timeTo}` : ''}</p>
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-black text-sm text-[#2D3436]">${ev.loc}</h3>
+                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.loc)}" target="_blank" class="text-blue-500 text-[10px]"><i class="fas fa-location-arrow"></i></a>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-1">${ev.desc}</p>
+                            <p class="text-[10px] font-black mt-2 text-gray-800">¥ ${(ev.cost || 0).toLocaleString()}</p>
+                            ${ev.eventImg ? `<div class="event-img-container"><img src="${ev.eventImg}" class="w-full h-full object-cover"></div>` : ''}
                         </div>
                     </div>`;
                 }
@@ -309,59 +322,45 @@
             document.querySelectorAll('.day-card').forEach((el, i) => el.classList.toggle('active', i === idx));
         }
 
+        // 其他功能維持
+        function viewDoc(idx) {
+            const doc = appData.documents[idx];
+            const win = window.open();
+            if (!win) { window.location.href = doc.data; return; }
+            if (doc.type.includes('pdf')) win.document.write(`<title>${doc.name}</title><body style="margin:0;"><embed width="100%" height="100%" src="${doc.data}" type="application/pdf"></body>`);
+            else win.document.write(`<title>${doc.name}</title><body style="margin:0;background:#000;display:flex;justify-content:center;align-items:center;"><img src="${doc.data}" style="max-width:100%;"></body>`);
+        }
+
+        function renderDocuments() {
+            const container = document.getElementById('document-list'); 
+            container.innerHTML = appData.documents.length ? '' : '<div class="text-[10px] text-white/20 text-center py-10 italic uppercase tracking-widest">尚無文件</div>';
+            appData.documents.forEach((doc, i) => {
+                container.innerHTML += `<div class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 animate-fade"><div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-blue-300"><i class="fas ${doc.type.includes('pdf') ? 'fa-file-pdf' : 'fa-file-image'}"></i></div><div class="flex-1 truncate"><h4 class="text-xs font-bold truncate">${doc.name}</h4><p class="text-[9px] text-white/40 uppercase tracking-widest">${doc.date}</p></div><div class="flex gap-1"><button onclick="viewDoc(${i})" class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center active:scale-90"><i class="fas fa-eye text-xs"></i></button>${isEditing ? `<button onclick="appData.documents.splice(${i},1);saveData();renderDocuments();" class="w-9 h-9 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}</div></div>`;
+            });
+        }
+
         function renderChecklist() {
             const list = document.getElementById('checklist'); list.innerHTML = '';
-            if (appData.checklist.length === 0) {
-                list.innerHTML = '<div class="text-[10px] text-gray-300 text-center py-8 italic">尚無準備項目</div>';
-            }
             appData.checklist.forEach((item, i) => {
-                list.innerHTML += `<div class="flex items-center gap-3 p-4 rounded-2xl bg-white border border-gray-100 group animate-fade" onclick="${!isEditing ? `appData.checklist[${i}].done=!appData.checklist[${i}].done;saveData();renderChecklist()` : ''}">
-                    <div class="w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center ${item.done ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-200'}">${item.done ? '<i class="fas fa-check text-[10px]"></i>' : ''}</div>
-                    <div class="flex-1">${isEditing ? `<input value="${item.task}" oninput="appData.checklist[${i}].task=this.value" class="w-full text-sm font-bold bg-transparent border-b outline-none">` : `<span class="text-sm font-bold ${item.done ? 'line-through text-gray-300' : ''}">${item.task}</span>`}</div>
-                    ${isEditing ? `<button onclick="appData.checklist.splice(${i},1);renderChecklist()" class="text-red-300 hover:text-red-500 px-2"><i class="fas fa-times-circle"></i></button>` : ''}
-                </div>`;
+                list.innerHTML += `<div class="flex items-center gap-3 p-4 rounded-2xl bg-white border border-gray-100 animate-fade" onclick="${!isEditing ? `appData.checklist[${i}].done=!appData.checklist[${i}].done;saveData();renderChecklist()` : ''}"><div class="w-6 h-6 rounded-lg border-2 flex items-center justify-center ${item.done ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-200'}">${item.done ? '<i class="fas fa-check text-[10px]"></i>' : ''}</div><div class="flex-1">${isEditing ? `<input value="${item.task}" oninput="appData.checklist[${i}].task=this.value" class="w-full text-sm font-bold bg-transparent outline-none">` : `<span class="text-sm font-bold ${item.done ? 'line-through text-gray-300' : ''}">${item.task}</span>`}</div>${isEditing ? `<button onclick="appData.checklist.splice(${i},1);renderChecklist()" class="text-red-300 px-2"><i class="fas fa-times-circle text-lg"></i></button>` : ''}</div>`;
             });
         }
 
         function renderLinks() {
             const list = document.getElementById('link-list'); list.innerHTML = '';
             appData.links.forEach((l, i) => {
-                if (isEditing) {
-                    list.innerHTML += `<div class="flex gap-2 mb-2 animate-fade"><input value="${l.title}" oninput="appData.links[${i}].title=this.value" class="flex-1 text-[10px] p-2 border rounded"><input value="${l.url}" oninput="appData.links[${i}].url=this.value" class="flex-1 text-[10px] p-2 border rounded"><button onclick="appData.links.splice(${i},1);renderLinks()" class="text-red-400 px-1"><i class="fas fa-trash"></i></button></div>`;
-                } else {
-                    list.innerHTML += `<a href="${l.url}" target="_blank" class="block p-4 bg-gray-50 rounded-2xl border border-gray-100 text-sm font-bold flex justify-between items-center active:scale-95 transition-all">${l.title} <i class="fas fa-external-link-alt text-[10px] text-gray-300"></i></a>`;
-                }
+                list.innerHTML += `<div class="flex gap-2"><a href="${l.url}" target="_blank" class="flex-1 p-4 bg-gray-50 rounded-2xl text-sm font-bold flex justify-between items-center active:scale-[0.98]">${isEditing ? `<input value="${l.title}" oninput="appData.links[${i}].title=this.value" class="bg-transparent outline-none w-full mr-2">` : `<span>${l.title}</span>`}<i class="fas fa-external-link-alt text-xs text-gray-300"></i></a>${isEditing ? `<button onclick="appData.links.splice(${i},1);renderLinks()" class="px-2 text-red-300"><i class="fas fa-trash-alt"></i></button>` : ''}</div>`;
             });
         }
-
-        function renderDocuments() {
-            const container = document.getElementById('document-list'); 
-            container.innerHTML = appData.documents.length ? '' : '<div class="text-[10px] text-white/20 text-center py-10 border border-dashed border-white/10 rounded-3xl italic">尚無文件</div>';
-            appData.documents.forEach((doc, i) => {
-                container.innerHTML += `<div class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5"><div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-red-300"><i class="fas ${doc.type.includes('pdf') ? 'fa-file-pdf' : 'fa-file-image'} text-lg"></i></div><div class="flex-1 truncate"><h4 class="text-xs font-bold truncate">${doc.name}</h4><p class="text-[9px] text-white/40 font-black tracking-widest uppercase">${doc.date}</p></div><div class="flex gap-1"><button onclick="viewDoc(${i})" class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20"><i class="fas fa-eye text-xs"></i></button>${isEditing ? `<button onclick="appData.documents.splice(${i},1);saveData();renderDocuments();" class="w-9 h-9 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}</div></div>`;
-            });
-        }
-
-        // --- 功能控制 ---
-        function addEvent() { appData.itinerary[currentDayIdx].events.push({ timeFrom: "09:00", timeTo: "10:30", loc: "新景點", desc: "請輸入描述", cost: 0, mapUrl: "", eventImg: "" }); renderDay(currentDayIdx); }
-        function addLink() { appData.links.push({ title: "新網址", url: "https://" }); renderLinks(); }
-        function addCheckItem() { appData.checklist.push({ task: "新清單項目", done: false }); renderChecklist(); }
 
         function toggleEdit() {
             isEditing = !isEditing;
             const btn = document.getElementById('edit-btn');
             btn.innerHTML = isEditing ? '<i class="fas fa-check"></i> 儲存修改' : '<i class="fas fa-edit"></i> 編輯模式';
-            btn.classList.toggle('bg-green-600', isEditing);
-            
-            // 顯示/隱藏新增按鈕
-            document.getElementById('add-event-container').classList.toggle('hidden', !isEditing);
-            document.getElementById('banner-upload-btn').classList.toggle('hidden', !isEditing);
-            document.getElementById('add-doc-btn').classList.toggle('hidden', !isEditing);
-            document.getElementById('add-link-btn').classList.toggle('hidden', !isEditing);
-            document.getElementById('add-check-btn').classList.toggle('hidden', !isEditing);
-            
+            btn.classList.toggle('bg-green-600', isEditing); btn.classList.toggle('bg-[#2D3436]', !isEditing);
+            ['add-event-container', 'banner-upload-btn', 'add-doc-btn', 'add-link-btn', 'add-check-btn'].forEach(id => document.getElementById(id).classList.toggle('hidden', !isEditing));
             if (!isEditing) saveData();
-            renderDay(currentDayIdx); renderLinks(); renderChecklist(); renderDocuments();
+            renderDay(currentDayIdx); renderChecklist(); renderDocuments(); renderLinks();
         }
 
         function switchTab(tab) {
@@ -383,40 +382,26 @@
             try {
                 const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=43.0667&longitude=141.35&current_weather=true');
                 const data = await res.json();
-                document.getElementById('weather-display').innerText = `${Math.round(data.current_weather.temperature)}°C / 札幌市`;
+                document.getElementById('weather-display').innerText = `${Math.round(data.current_weather.temperature)}°C / 札幌`;
             } catch (e) { document.getElementById('weather-display').innerText = '-2°C / 札幌'; }
         }
 
         function initDaySelector() {
             const s = document.getElementById('day-selector'); s.innerHTML = '';
             appData.itinerary.forEach((day, i) => {
-                s.innerHTML += `<button onclick="renderDay(${i})" class="day-card flex-shrink-0 w-16 h-20 rounded-2xl flex flex-col items-center justify-center bg-white border border-gray-100 font-black transition-all">
-                    <span class="text-[9px] opacity-40 uppercase">FEB</span><span class="text-xl">${day.date.split('/')[1]}</span>
-                </button>`;
+                s.innerHTML += `<button onclick="renderDay(${i})" class="day-card flex-shrink-0 w-16 h-20 rounded-2xl flex flex-col items-center justify-center bg-white border border-gray-100 font-black transition-all"><span class="text-[9px] opacity-40 uppercase">FEB</span><span class="text-xl">${day.date.split('/')[1]}</span></button>`;
             });
-        }
-
-        function viewDoc(idx) {
-            const doc = appData.documents[idx];
-            const win = window.open();
-            if (doc.type.includes('pdf')) win.document.write(`<iframe src="${doc.data}" frameborder="0" style="width:100%; height:100%;"></iframe>`);
-            else win.document.write(`<body style="margin:0; background:#000; display:flex; align-items:center; justify-content:center;"><img src="${doc.data}" style="max-width:100%; max-height:100%;"></body>`);
         }
 
         function showLoading(show) { document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none'; }
         function saveData() { localStorage.setItem(STORE_KEY, JSON.stringify(appData)); }
         function loadData() { const saved = localStorage.getItem(STORE_KEY); if (saved) appData = JSON.parse(saved); }
-        function resetData() { if (confirm("確定重置所有行程、照片與清單？")) { localStorage.removeItem(STORE_KEY); location.reload(); } }
+        function resetData() { if (confirm("確定重置所有行程？")) { localStorage.removeItem(STORE_KEY); location.reload(); } }
+        function addEvent() { appData.itinerary[currentDayIdx].events.push({ timeFrom: "09:00", timeTo: "10:00", loc: "新行程", desc: "", cost: 0, eventImg: "" }); renderDay(currentDayIdx); }
+        function addCheckItem() { appData.checklist.push({ task: "待辦項目", done: false }); renderChecklist(); }
+        function addLink() { appData.links.push({ title: "新連結", url: "https://" }); renderLinks(); }
 
-        window.onload = () => {
-            loadData();
-            initDaySelector();
-            renderDay(0);
-            renderLinks();
-            renderChecklist();
-            renderDocuments();
-            fetchWeather();
-        };
+        window.onload = () => { loadData(); initDaySelector(); renderDay(0); renderChecklist(); renderDocuments(); renderLinks(); fetchWeather(); };
     </script>
 </body>
 </html>
