@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>札幌音樂之旅 2026 | 繽紛日系</title>
+    <title>北京「弦動古都」6 日 5 夜詳細行程</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -86,7 +86,7 @@
                 <i class="fas fa-heart"></i>
             </div>
             <div>
-                <h1 class="text-base font-black text-gray-800 tracking-tight">札幌音樂小旅行</h1>
+                <h1 class="text-base font-black text-gray-800 tracking-tight">北京小旅行</h1>
                 <p class="text-[9px] font-bold text-pink-300 tracking-[0.2em] uppercase">Sapporo Music 2026</p>
             </div>
         </div>
@@ -102,23 +102,24 @@
         
         <section id="content-itinerary" class="space-y-6 animate-pop">
             <!-- 天氣與匯率 -->
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-4 rounded-[2rem] shadow-sm flex items-center gap-3 border border-pink-50">
-                    <div id="weather-icon" class="text-2xl text-blue-300"><i class="fas fa-snowflake"></i></div>
-                    <div>
-                        <p id="weather-display" class="text-xs font-black text-gray-700">讀取中...</p>
-                        <p class="text-[9px] text-blue-300 font-bold tracking-widest uppercase">今日天氣</p>
-                    </div>
-                </div>
-                <div class="bg-white p-4 rounded-[2rem] shadow-sm border border-pink-50">
-                    <div class="flex items-center gap-1">
-                        <input type="number" id="jpy-input" oninput="convertCurrency('jpy')" placeholder="¥ 日幣" class="w-full bg-gray-50 rounded-xl p-1.5 text-[10px] font-black outline-none focus:ring-1 ring-pink-200">
-                        <span class="text-pink-200 text-[10px]">❤</span>
-                        <input type="number" id="hkd-input" oninput="convertCurrency('hkd')" placeholder="$ 港幣" class="w-full bg-pink-50 rounded-xl p-1.5 text-[10px] font-black outline-none text-pink-600">
-                    </div>
-                    <p class="text-[8px] text-gray-400 font-bold tracking-widest uppercase mt-1 text-center">匯率 0.052</p>
-                </div>
-            </div>
+<div class="grid grid-cols-2 gap-4">
+    <div class="bg-white p-4 rounded-[2rem] shadow-sm flex items-center gap-3 border border-pink-50">
+        <div id="weather-icon" class="text-2xl text-orange-300"><i class="fas fa-sun"></i></div>
+        <div>
+            <p id="weather-display" class="text-xs font-black text-gray-700">北京 讀取中...</p>
+            <p class="text-[9px] text-orange-300 font-bold tracking-widest uppercase">今日天氣</p>
+        </div>
+    </div>
+
+    <div class="bg-white p-4 rounded-[2rem] shadow-sm border border-pink-50">
+        <div class="flex items-center gap-1">
+            <input type="number" id="cny-input" oninput="convertCurrency('cny')" placeholder="¥ 人民幣" class="w-full bg-gray-50 rounded-xl p-1.5 text-[10px] font-black outline-none focus:ring-1 ring-pink-200">
+            <span class="text-pink-200 text-[10px]">❤</span>
+            <input type="number" id="hkd-input" oninput="convertCurrency('hkd')" placeholder="$ 港幣" class="w-full bg-pink-50 rounded-xl p-1.5 text-[10px] font-black outline-none text-pink-600">
+        </div>
+        <p class="text-[8px] text-gray-400 font-bold tracking-widest uppercase mt-1 text-center">參考匯率 0.92</p>
+    </div>
+</div>
 
             <!-- 日期選擇器 -->
             <div class="flex gap-4 overflow-x-auto no-scrollbar py-3 px-1" id="day-selector"></div>
