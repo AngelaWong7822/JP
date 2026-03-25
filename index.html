@@ -101,43 +101,25 @@
     <main class="max-w-md mx-auto p-4 space-y-6">
         
         <section id="content-itinerary" class="space-y-6 animate-pop">
-            <!-- 天氣與匯率 -->
-<div class="grid grid-cols-2 gap-4">
-    <div class="bg-white p-4 rounded-[2rem] shadow-sm flex items-center gap-3 border border-pink-50">
-        <div id="weather-icon" class="text-2xl text-gray-400"><i class="fas fa-cloud"></i></div>
-        <div>
-            <p id="weather-display" class="text-xs font-black text-gray-700">北京 8°C - 14°C</p>
-            <p class="text-[9px] text-gray-400 font-bold tracking-widest uppercase">4/4 預報 (多雲)</p>
-        </div>
-    </div>
-
-    <div class="bg-white p-4 rounded-[2rem] shadow-sm border border-pink-50">
-        <div class="flex items-center gap-1">
-            <input type="number" id="cny-input" oninput="convertCurrency('cny')" placeholder="¥ 人民幣" class="w-full bg-gray-50 rounded-xl p-1.5 text-[10px] font-black outline-none focus:ring-1 ring-pink-200">
-            <span class="text-pink-200 text-[10px]">❤</span>
-            <input type="number" id="hkd-input" oninput="convertCurrency('hkd')" placeholder="$ 港幣" class="w-full bg-pink-50 rounded-xl p-1.5 text-[10px] font-black outline-none text-pink-600">
-        </div>
-        <p class="text-[8px] text-gray-400 font-bold tracking-widest uppercase mt-1 text-center">匯率 1.13 (CNY→HKD)</p>
-    </div>
-</div>
-
-<script>
-// 修正後的匯率換算邏輯
-function convertCurrency(type) {
-    const rate = 1.1328; // 1 人民幣 = 1.1328 港幣
-    const cnyInput = document.getElementById('cny-input');
-    const hkdInput = document.getElementById('hkd-input');
-
-    if (type === 'cny') {
-        // 輸入人民幣，換算成港幣
-        hkdInput.value = (cnyInput.value * rate).toFixed(2);
-    } else if (type === 'hkd') {
-        // 輸入港幣，換算成人民幣
-        cnyInput.value = (hkdInput.value / rate).toFixed(2);
-    }
-}
-</script>
-
+            
+            <!-- 天氣與匯率 -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-[2rem] shadow-sm flex items-center gap-3 border border-pink-50">
+                    <div id="weather-icon" class="text-2xl text-blue-300"><i class="fas fa-snowflake"></i></div>
+                    <div>
+                        <p id="weather-display" class="text-xs font-black text-gray-700">讀取中...</p>
+                        <p class="text-[9px] text-blue-300 font-bold tracking-widest uppercase">今日天氣</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-[2rem] shadow-sm border border-pink-50">
+                    <div class="flex items-center gap-1">
+                        <input type="number" id="jpy-input" oninput="convertCurrency('jpy')" placeholder="¥ 日幣" class="w-full bg-gray-50 rounded-xl p-1.5 text-[10px] font-black outline-none focus:ring-1 ring-pink-200">
+                        <span class="text-pink-200 text-[10px]">❤</span>
+                        <input type="number" id="hkd-input" oninput="convertCurrency('hkd')" placeholder="$ 港幣" class="w-full bg-pink-50 rounded-xl p-1.5 text-[10px] font-black outline-none text-pink-600">
+                    </div>
+                    <p class="text-[8px] text-gray-400 font-bold tracking-widest uppercase mt-1 text-center">匯率 0.052</p>
+                </div>
+            </div>
             <!-- 日期選擇器 -->
             <div class="flex gap-4 overflow-x-auto no-scrollbar py-3 px-1" id="day-selector"></div>
 
