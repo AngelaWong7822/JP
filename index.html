@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>北京「弦動古都」旅行筆記 V3</title>
+    <title>北京「弦動古都」旅行筆記 V4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -46,7 +46,7 @@
             </div>
             <div>
                 <h1 class="text-base font-black text-gray-800">弦動古都</h1>
-                <p class="text-[8px] font-bold text-pink-300 tracking-tighter">BEIJING TRIP • V3.0</p>
+                <p class="text-[8px] font-bold text-pink-300 tracking-tighter">BEIJING TRIP • V4.0</p>
             </div>
         </div>
         <div class="flex gap-2">
@@ -92,7 +92,7 @@
                             <div id="day-title-container"></div>
                         </div>
                         <div class="text-right">
-                            <p class="text-[9px] font-bold opacity-70 uppercase tracking-widest mb-1">Estimated Budget</p>
+                            <p class="text-[9px] font-bold opacity-70 uppercase tracking-widest mb-1">估算預算</p>
                             <div id="day-budget-container" class="text-2xl font-black italic tracking-tighter"></div>
                         </div>
                     </div>
@@ -108,22 +108,12 @@
         </section>
 
         <section id="content-tools" class="hidden space-y-6 pb-10">
-            <!-- Travel Japanese Cards -->
-            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-8 rounded-[3rem] text-white shadow-xl">
-                <h2 class="text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <i class="fas fa-language text-lg"></i> 旅行日文 N5 短語
-                </h2>
-                <div class="grid grid-cols-1 gap-3" id="jp-phrase-list">
-                    <!-- Added by JS -->
-                </div>
-            </div>
-
             <!-- Documents -->
             <div class="bg-[var(--jp-ink)] p-8 rounded-[3rem] text-white shadow-xl">
                 <div class="flex justify-between items-center mb-6">
                     <div>
                         <h2 class="text-sm font-black uppercase tracking-widest">重要文件備份</h2>
-                        <p class="text-[8px] opacity-40">回鄉證、酒店訂單影印本</p>
+                        <p class="text-[8px] opacity-40">回鄉證、飯店訂單影印本</p>
                     </div>
                     <button id="add-doc-btn" onclick="triggerInput('lib-file-input')" class="hidden px-4 py-2 bg-[var(--cute-pink)] rounded-xl text-[10px] font-black shadow-lg">上傳檔案</button>
                 </div>
@@ -154,7 +144,7 @@
     </nav>
 
     <script>
-        const STORE_KEY = 'BEIJING_V3_MASTER';
+        const STORE_KEY = 'BEIJING_V4_MASTER';
         const rate = 1.132;
         let currentDayIdx = 0, isEditing = false, activeEventIdx = null;
 
@@ -178,12 +168,7 @@
                 { task: "插頭轉換器", done: false },
                 { task: "北京交通卡 (APP下載)", done: true }
             ],
-            documents: [],
-            phrases: [
-                { jp: "すみません、ここはどこですか？", cn: "不好意思，請問這裡是哪裡？" },
-                { jp: "お会計をお願いします。", cn: "請幫我結帳。" },
-                { jp: "写真を撮ってもいいですか？", cn: "可以拍照嗎？" }
-            ]
+            documents: []
         };
 
         let appData = JSON.parse(localStorage.getItem(STORE_KEY)) || defaultData;
@@ -252,7 +237,7 @@
                         <div class="timeline-dot"></div>
                         <div class="flex justify-between items-start mb-1">
                             <p class="text-[10px] font-black text-pink-300 tracking-tighter">${ev.time || '09:00'}</p>
-                            ${!isEditing ? `<span class="status-badge ${ev.status === 'booked' ? 'status-booked' : 'status-pending'}">${ev.status === 'booked' ? 'Booked' : 'Pending'}</span>` : ''}
+                            ${!isEditing ? `<span class="status-badge ${ev.status === 'booked' ? 'status-booked' : 'status-pending'}">${ev.status === 'booked' ? '已預訂' : '待辦中'}</span>` : ''}
                         </div>
                         ${isEditing ? `
                             <div class="space-y-2 bg-pink-50 p-4 rounded-2xl border border-pink-100 shadow-inner">
@@ -303,12 +288,12 @@
             try {
                 const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=39.9&longitude=116.4&current_weather=true');
                 const data = await res.json();
-                document.getElementById('weather-display').innerText = `${Math.round(data.current_weather.temperature)}°C Beijing`;
+                document.getElementById('weather-display').innerText = `${Math.round(data.current_weather.temperature)}°C 北京`;
                 const code = data.current_weather.weathercode;
                 const icon = document.getElementById('weather-icon');
                 if(code > 50) icon.innerHTML = '<i class="fas fa-cloud-rain text-blue-300"></i>';
                 else icon.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
-            } catch { document.getElementById('weather-display').innerText = '12°C Beijing'; }
+            } catch { document.getElementById('weather-display').innerText = '12°C 北京'; }
         }
 
         function initSelector() {
@@ -317,15 +302,6 @@
                     <span class="text-[10px] font-black">${d.date}</span>
                     <span class="text-[8px] font-bold opacity-30 mt-1">周${d.weekday}</span>
                 </button>
-            `).join('');
-        }
-
-        function renderPhrases() {
-            document.getElementById('jp-phrase-list').innerHTML = appData.phrases.map(p => `
-                <div class="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 hover:bg-white/20 transition-colors">
-                    <p class="text-xs font-black tracking-tight">${p.jp}</p>
-                    <p class="text-[10px] opacity-70 mt-1">${p.cn}</p>
-                </div>
             `).join('');
         }
 
@@ -346,7 +322,7 @@
                     <img src="${d.data}" class="w-full aspect-square object-cover rounded-3xl shadow-md border-2 border-white group-hover:brightness-75 transition-all" onclick="openLightbox('${d.data}')">
                     ${isEditing ? `<button onclick="appData.documents.splice(${i},1);saveData();renderDocs()" class="absolute -top-2 -right-2 bg-red-500 w-7 h-7 rounded-full text-[10px] border-2 border-white shadow-lg"><i class="fas fa-times"></i></button>` : ''}
                 </div>
-            `).join('') || '<p class="col-span-2 text-center opacity-30 text-[10px] py-10 font-bold tracking-widest uppercase">No Documents</p>';
+            `).join('') || '<p class="col-span-2 text-center opacity-30 text-[10px] py-10 font-bold tracking-widest uppercase">尚無文件</p>';
         }
 
         function switchTab(tab) {
@@ -360,7 +336,7 @@
             } else {
                 tabBtn('tab-tools').className = 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] bg-[var(--jp-ink)] text-white shadow-xl';
                 tabBtn('tab-itinerary').className = 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-gray-400';
-                renderDocs(); renderCheck(); renderPhrases();
+                renderDocs(); renderCheck();
             }
         }
 
