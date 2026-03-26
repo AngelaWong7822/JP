@@ -39,10 +39,8 @@
             <div class="flex flex-col">
                 <div class="flex items-center gap-1">
                     <select id="trip-selector" onchange="switchTrip(this.value)" class="text-sm font-black text-gray-800 bg-pink-50 px-2 py-1 outline-none max-w-[100px] border-none rounded-lg">
-                        <!-- Trips populating here -->
                     </select>
                     <button onclick="createNewTrip()" class="text-pink-400 text-sm p-1"><i class="fas fa-plus-circle"></i></button>
-                    <!-- 新增刪除當前旅程按鈕 -->
                     <button id="del-trip-btn" onclick="deleteCurrentTrip()" class="hidden text-red-300 text-[10px] ml-1 p-1 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
                 </div>
                 <p class="text-[8px] font-bold text-pink-300 uppercase tracking-widest">Plan your trip!</p>
@@ -62,9 +60,7 @@
                             <p id="weather-display" class="text-xs font-black text-gray-700">--°C</p>
                             <span id="weather-loading">●</span>
                         </div>
-                        <div id="city-area">
-                            <!-- City Input / Display -->
-                        </div>
+                        <div id="city-area"></div>
                     </div>
                 </div>
                 <div class="bg-white p-4 rounded-[2rem] shadow-sm border border-pink-50">
@@ -145,7 +141,7 @@
     </nav>
 
     <script>
-        const KEY = 'TRAVEL_V5_3_STORAGE';
+        const KEY = 'TRAVEL_V5_4_STORAGE';
         let isEdit = false, curDayIdx = 0, curEventIdx = null;
 
         const defaultTrip = (name = "我的旅行", city = "Hong Kong") => ({
@@ -163,7 +159,6 @@
             localStorage.setItem(KEY, JSON.stringify(data)); 
         }
 
-        // --- 初始化 UI ---
         function init() {
             renderTripSelector();
             renderDaySelector();
@@ -219,39 +214,28 @@
             }
         }
 
-        // --- 刪除目前選中的旅程 ---
         function deleteCurrentTrip() {
-            if (data.trips.length <= 1) {
-                alert("至少需要保留一個旅程！");
-                return;
-            }
-            if (confirm(`確定要刪除「${trip.name}」嗎？所有資料將無法恢復。`)) {
+            if (data.trips.length <= 1) return alert("至少需要保留一個旅程！");
+            if (confirm(`確定要刪除「${trip.name}」嗎？`)) {
                 data.trips.splice(data.activeIdx, 1);
-                data.activeIdx = 0; // 回到第一個旅程
+                data.activeIdx = 0;
                 trip = data.trips[data.activeIdx];
                 curDayIdx = 0;
-                // 儲存並重新加載
                 localStorage.setItem(KEY, JSON.stringify(data));
                 init();
             }
         }
 
-        // --- 核心編輯切換 ---
         function toggleEdit() {
             isEdit = !isEdit;
             const btn = document.getElementById('edit-btn');
             btn.innerText = isEdit ? '完成' : '編輯';
-            btn.classList.toggle('bg-green-500', isEdit);
-            btn.classList.toggle('bg-[var(--jp-ink)]', !isEdit);
+            btn.className = `px-5 py-2 text-white rounded-2xl font-black text-[11px] shadow-lg active:scale-90 transition-all ${isEdit?'bg-green-500':'bg-[var(--jp-ink)]'}`;
             
-            // 編輯模式下顯示刪除按鈕
             document.getElementById('del-trip-btn').classList.toggle('hidden', !isEdit);
             document.querySelectorAll('#edit-controls, #btn-upload-banner, #btn-upload-doc, #btn-add-check').forEach(el => el.classList.toggle('hidden', !isEdit));
             
-            if(!isEdit) { 
-                save(); 
-                fetchWeather(); // 點擊完成後觸發天氣抓取
-            }
+            if(!isEdit) { save(); fetchWeather(); }
             renderDaySelector();
             renderDay(curDayIdx);
             renderCityUI();
@@ -259,38 +243,22 @@
             renderCheck();
         }
 
-        // --- 天氣抓取邏輯 ---
         async function fetchWeather() {
             const display = document.getElementById('weather-display');
-            const iconCont = document.getElementById('weather-icon');
             const loader = document.getElementById('weather-loading');
-            
             if(!trip.city) return;
             loader.style.display = 'inline';
-
             try {
                 const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip.city)}&count=1&language=en&format=json`);
                 const geoData = await geoRes.json();
-
                 if (geoData.results && geoData.results.length > 0) {
                     const { latitude, longitude } = geoData.results[0];
                     const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
                     const weatherData = await weatherRes.json();
-                    
-                    const temp = Math.round(weatherData.current_weather.temperature);
-                    const code = weatherData.current_weather.weathercode;
-                    
-                    display.innerText = `${temp}°C`;
-                    updateWeatherIcon(code);
-                } else {
-                    display.innerText = "N/A";
-                }
-            } catch (err) {
-                console.error("Weather Error:", err);
-                display.innerText = "ERR";
-            } finally {
-                loader.style.display = 'none';
-            }
+                    display.innerText = `${Math.round(weatherData.current_weather.temperature)}°C`;
+                    updateWeatherIcon(weatherData.current_weather.weathercode);
+                } else { display.innerText = "N/A"; }
+            } catch (err) { display.innerText = "ERR"; } finally { loader.style.display = 'none'; }
         }
 
         function updateWeatherIcon(code) {
@@ -302,10 +270,10 @@
             else icon.innerHTML = '<i class="fas fa-bolt text-purple-400"></i>';
         }
 
-        // --- 其他業務邏輯 ---
         function toggleEventStatus(dayIdx, eventIdx) {
             const ev = trip.itinerary[dayIdx].events[eventIdx];
             ev.status = (ev.status === 'booked' ? 'pending' : 'booked');
+            save();
             renderDay(dayIdx);
         }
 
@@ -316,7 +284,7 @@
             document.getElementById('day-label').innerText = `${day.date} · ${day.weekday}`;
             
             const tBox = document.getElementById('day-title-box');
-            tBox.innerHTML = isEdit ? `<input oninput="trip.itinerary[${idx}].title=this.value" value="${day.title}" class="w-full bg-white/20 border-b-2 border-white outline-none text-xl font-bold">` : `<h2 class="text-2xl font-black drop-shadow-md">${day.title}</h2>`;
+            tBox.innerHTML = isEdit ? `<input oninput="trip.itinerary[${idx}].title=this.value" value="${day.title}" class="w-full bg-white/20 border-b-2 border-white outline-none text-xl font-bold">` : `<h2 class="text-2xl font-black drop-shadow-md text-white">${day.title}</h2>`;
 
             const bBox = document.getElementById('day-budget-box');
             bBox.innerHTML = isEdit ? `<input type="number" oninput="trip.itinerary[${idx}].budget=this.value" value="${day.budget}" class="w-20 bg-white/20 outline-none border-b-2 border-white text-right">` : `¥ ${day.budget}`;
@@ -324,22 +292,26 @@
             const timeline = document.getElementById('timeline');
             timeline.innerHTML = '<div class="timeline-line"></div>';
             day.events.forEach((ev, i) => {
+                const statusClass = ev.status === 'booked' ? 'bg-green-50 text-green-500 border-green-200' : 'bg-orange-50 text-orange-500 border-orange-200';
+                const statusText = ev.status === 'booked' ? '已完成' : '進行中';
+
                 timeline.innerHTML += `
                     <div class="relative pl-14 animate-fade-in">
                         <div class="timeline-dot"></div>
-                        <div class="flex justify-between items-start mb-1">
+                        <div class="flex justify-between items-center mb-1">
                             <p class="text-[10px] font-black text-pink-300 uppercase">${ev.time}</p>
-                            ${!isEdit ? `<span class="px-2 py-0.5 rounded text-[8px] font-black ${ev.status=='booked'?'bg-green-50 text-green-500':'bg-orange-50 text-orange-500'}">${ev.status=='booked'?'已完成':'進行中'}</span>` : ''}
+                            <!-- 狀態標籤：非編輯模式只顯示，編輯模式下可點擊切換 -->
+                            <button onclick="toggleEventStatus(${idx}, ${i})" 
+                                    class="px-2 py-0.5 rounded text-[8px] font-black border transition-all active:scale-95 ${statusClass} ${isEdit ? 'shadow-sm border-2' : 'border-transparent cursor-default'}">
+                                ${statusText} ${isEdit ? '<i class="fas fa-sync-alt ml-1 opacity-50"></i>' : ''}
+                            </button>
                         </div>
                         ${isEdit ? `
                             <div class="bg-white/50 border border-pink-50 p-4 rounded-2xl space-y-2">
-                                <div class="flex justify-between items-center">
-                                    <input oninput="trip.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" placeholder="地點名稱" class="text-sm font-bold bg-transparent border-b border-pink-100 outline-none flex-1">
-                                    <button onclick="toggleEventStatus(${idx}, ${i})" class="ml-2 px-2 py-1 rounded text-[8px] font-black ${ev.status=='booked'?'bg-green-500 text-white':'bg-orange-400 text-white'}">${ev.status=='booked'?'完成':'進行'}</button>
-                                </div>
+                                <input oninput="trip.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" placeholder="地點名稱" class="text-sm font-bold bg-transparent border-b border-pink-100 outline-none w-full">
                                 <input oninput="trip.itinerary[${idx}].events[${i}].time=this.value" value="${ev.time}" placeholder="時間 (如 14:00)" class="text-[10px] w-full bg-transparent outline-none">
                                 <div class="flex gap-2">
-                                    <button onclick="curEventIdx=${i};triggerFile('event-img-input')" class="text-[8px] bg-white border px-2 py-1 rounded shadow-sm">更換圖片</button>
+                                    <button onclick="curEventIdx=${i};triggerFile('event-img-input')" class="text-[8px] bg-white border px-2 py-1 rounded shadow-sm">圖片</button>
                                     <button onclick="trip.itinerary[${idx}].events.splice(${i},1);renderDay(${idx})" class="text-[8px] bg-red-50 text-red-400 px-2 py-1 rounded">刪除</button>
                                 </div>
                             </div>
@@ -354,7 +326,6 @@
             document.querySelectorAll('.day-card').forEach((el, i) => el.classList.toggle('active', i === idx));
         }
 
-        // --- 工具功能 ---
         function convert(type) {
             const l = document.getElementById('curr-local'), h = document.getElementById('curr-home');
             const r = trip.rate || 1;
