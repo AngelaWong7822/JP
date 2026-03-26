@@ -42,6 +42,8 @@
                         <!-- Trips populating here -->
                     </select>
                     <button onclick="createNewTrip()" class="text-pink-400 text-sm p-1"><i class="fas fa-plus-circle"></i></button>
+                    <!-- 新增刪除當前旅程按鈕 -->
+                    <button id="del-trip-btn" onclick="deleteCurrentTrip()" class="hidden text-red-300 text-[10px] ml-1 p-1 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
                 </div>
                 <p class="text-[8px] font-bold text-pink-300 uppercase tracking-widest">Multi-Trip V5.3</p>
             </div>
@@ -217,6 +219,23 @@
             }
         }
 
+        // --- 刪除目前選中的旅程 ---
+        function deleteCurrentTrip() {
+            if (data.trips.length <= 1) {
+                alert("至少需要保留一個旅程！");
+                return;
+            }
+            if (confirm(`確定要刪除「${trip.name}」嗎？所有資料將無法恢復。`)) {
+                data.trips.splice(data.activeIdx, 1);
+                data.activeIdx = 0; // 回到第一個旅程
+                trip = data.trips[data.activeIdx];
+                curDayIdx = 0;
+                // 儲存並重新加載
+                localStorage.setItem(KEY, JSON.stringify(data));
+                init();
+            }
+        }
+
         // --- 核心編輯切換 ---
         function toggleEdit() {
             isEdit = !isEdit;
@@ -225,6 +244,8 @@
             btn.classList.toggle('bg-green-500', isEdit);
             btn.classList.toggle('bg-[var(--jp-ink)]', !isEdit);
             
+            // 編輯模式下顯示刪除按鈕
+            document.getElementById('del-trip-btn').classList.toggle('hidden', !isEdit);
             document.querySelectorAll('#edit-controls, #btn-upload-banner, #btn-upload-doc, #btn-add-check').forEach(el => el.classList.toggle('hidden', !isEdit));
             
             if(!isEdit) { 
