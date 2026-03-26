@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>旅行筆記 V5.2</title>
+    <title>旅行筆記 V5.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -16,10 +16,8 @@
         .timeline-line { position: absolute; left: 24px; top: 0; bottom: 0; width: 4px; background: #FFE4E9; z-index: 0; }
         .timeline-dot { position: absolute; left: 18px; width: 16px; height: 16px; border-radius: 50%; background: var(--cute-pink); border: 4px solid white; z-index: 10; margin-top: 4px; }
         #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10001; justify-content: center; align-items: center; }
-        .status-badge { font-size: 8px; padding: 2px 6px; border-radius: 6px; font-weight: 900; }
-        .status-booked { background: #E1F9F0; color: #1DB954; }
-        .status-pending { background: #FFF4E5; color: #FF9800; }
-        input, select { border-radius: 8px; }
+        #weather-loading { display: none; font-size: 8px; color: #FF85A1; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body class="pb-36">
@@ -36,16 +34,16 @@
     <header class="sticky top-0 z-50 glass border-b border-pink-50 px-6 py-4 flex justify-between items-center">
         <div class="flex items-center gap-3 overflow-hidden">
             <div class="flex-shrink-0 w-10 h-10 bg-[var(--cute-pink)] rounded-2xl flex items-center justify-center text-white shadow-lg">
-                <i class="fas fa-plane"></i>
+                <i class="fas fa-plane-departure"></i>
             </div>
             <div class="flex flex-col">
                 <div class="flex items-center gap-1">
-                    <select id="trip-selector" onchange="switchTrip(this.value)" class="text-sm font-black text-gray-800 bg-pink-50 px-2 py-1 outline-none max-w-[100px] border-none">
+                    <select id="trip-selector" onchange="switchTrip(this.value)" class="text-sm font-black text-gray-800 bg-pink-50 px-2 py-1 outline-none max-w-[100px] border-none rounded-lg">
                         <!-- Trips populating here -->
                     </select>
-                    <button onclick="createNewTrip()" class="text-pink-400 text-sm hover:scale-125 transition-transform p-1"><i class="fas fa-plus-circle"></i></button>
+                    <button onclick="createNewTrip()" class="text-pink-400 text-sm p-1"><i class="fas fa-plus-circle"></i></button>
                 </div>
-                <p class="text-[8px] font-bold text-pink-300 uppercase tracking-widest">Multi-Trip V5.2</p>
+                <p class="text-[8px] font-bold text-pink-300 uppercase tracking-widest">Multi-Trip V5.3</p>
             </div>
         </div>
         <button id="edit-btn" onclick="toggleEdit()" class="px-5 py-2 bg-[var(--jp-ink)] text-white rounded-2xl font-black text-[11px] shadow-lg active:scale-90 transition-all">編輯</button>
@@ -55,10 +53,13 @@
         <section id="content-itinerary" class="space-y-6">
             <!-- Widgets -->
             <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-4 rounded-[2rem] shadow-sm flex items-center gap-3 border border-pink-50">
-                    <div id="weather-icon" class="text-2xl text-orange-300"><i class="fas fa-cloud-sun"></i></div>
+                <div class="bg-white p-4 rounded-[2rem] shadow-sm flex items-center gap-3 border border-pink-50 min-h-[80px]">
+                    <div id="weather-icon" class="text-2xl text-orange-300"><i class="fas fa-sun"></i></div>
                     <div class="overflow-hidden">
-                        <p id="weather-display" class="text-xs font-black text-gray-700">--°C</p>
+                        <div class="flex items-center gap-1">
+                            <p id="weather-display" class="text-xs font-black text-gray-700">--°C</p>
+                            <span id="weather-loading">●</span>
+                        </div>
                         <div id="city-area">
                             <!-- City Input / Display -->
                         </div>
@@ -67,7 +68,7 @@
                 <div class="bg-white p-4 rounded-[2rem] shadow-sm border border-pink-50">
                     <div class="flex items-center gap-1">
                         <input type="number" id="curr-local" oninput="convert('local')" placeholder="外幣" class="w-full bg-gray-50 rounded-xl p-1.5 text-[10px] font-black outline-none">
-                        <i class="fas fa-exchange-alt text-[8px] text-pink-200"></i>
+                        <i class="fas fa-arrows-left-right text-[8px] text-pink-200"></i>
                         <input type="number" id="curr-home" oninput="convert('home')" placeholder="HKD" class="w-full bg-pink-50 rounded-xl p-1.5 text-[10px] font-black outline-none">
                     </div>
                     <div class="mt-1 text-center">
@@ -77,7 +78,7 @@
                 </div>
             </div>
 
-            <!-- Day Selector (Where you can edit Day & Weekday) -->
+            <!-- Day Selector -->
             <div class="flex gap-4 overflow-x-auto no-scrollbar py-2 px-1" id="day-selector"></div>
 
             <!-- Main Card -->
@@ -88,13 +89,13 @@
                     <button id="btn-upload-banner" onclick="triggerFile('banner-img-input')" class="hidden absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl text-white flex items-center justify-center border border-white/30"><i class="fas fa-camera"></i></button>
                     
                     <div class="absolute bottom-6 left-8 right-8 flex justify-between items-end text-white">
-                        <div class="flex-1">
-                            <span id="day-label" class="px-2 py-1 bg-[var(--cute-pink)] rounded-lg text-[9px] font-black mb-2 inline-block shadow-md uppercase">Day Info</span>
+                        <div class="flex-1 pr-4">
+                            <span id="day-label" class="px-2 py-1 bg-[var(--cute-pink)] rounded-lg text-[9px] font-black mb-2 inline-block shadow-md uppercase tracking-tighter">Day Info</span>
                             <div id="day-title-box"></div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-[9px] font-bold opacity-70 uppercase mb-1">預算</p>
-                            <div id="day-budget-box" class="text-2xl font-black italic"></div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-[9px] font-bold opacity-70 uppercase mb-1">今日預算</p>
+                            <div id="day-budget-box" class="text-2xl font-black italic tracking-tighter"></div>
                         </div>
                     </div>
                 </div>
@@ -113,19 +114,19 @@
         <section id="content-tools" class="hidden space-y-6 pb-10">
             <div class="bg-[var(--jp-ink)] p-8 rounded-[3rem] text-white shadow-xl">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-sm font-black uppercase tracking-widest">文件備份</h2>
-                    <button id="btn-upload-doc" onclick="triggerFile('lib-file-input')" class="hidden px-4 py-2 bg-[var(--cute-pink)] rounded-xl text-[10px] font-black">上傳</button>
+                    <h2 class="text-sm font-black uppercase tracking-widest">重要文件</h2>
+                    <button id="btn-upload-doc" onclick="triggerFile('lib-file-input')" class="hidden px-4 py-2 bg-[var(--cute-pink)] rounded-xl text-[10px] font-black">上傳檔案</button>
                 </div>
                 <div id="doc-list" class="grid grid-cols-2 gap-4"></div>
             </div>
             <div class="bg-white p-8 rounded-[3rem] border border-pink-50 shadow-lg">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-sm font-black text-gray-800">清單 Check</h2>
+                    <h2 class="text-sm font-black text-gray-800">行李清單</h2>
                     <button id="btn-add-check" onclick="addCheck()" class="hidden px-4 py-1.5 bg-pink-50 text-pink-500 rounded-xl text-[10px] font-bold">+ 新增</button>
                 </div>
                 <div id="check-list" class="space-y-3"></div>
             </div>
-            <button onclick="resetAll()" class="w-full text-[8px] text-gray-200 py-10 uppercase font-bold tracking-widest">重設所有資料</button>
+            <button onclick="resetAll()" class="w-full text-[8px] text-gray-200 py-10 uppercase font-bold tracking-widest">重設所有數據</button>
         </section>
     </main>
 
@@ -133,26 +134,26 @@
     <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass rounded-[2.5rem] border border-white shadow-2xl z-[100] flex p-2 gap-2">
         <button onclick="setTab('itinerary')" id="nav-itinerary" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] bg-[var(--jp-ink)] text-white shadow-xl">
             <i class="fas fa-map-marked-alt text-sm"></i>
-            <span class="text-[9px] font-black">行程</span>
+            <span class="text-[9px] font-black">行程規劃</span>
         </button>
         <button onclick="setTab('tools')" id="nav-tools" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-gray-400">
-            <i class="fas fa-box-open text-sm"></i>
-            <span class="text-[9px] font-black">工具</span>
+            <i class="fas fa-briefcase text-sm"></i>
+            <span class="text-[9px] font-black">工具清單</span>
         </button>
     </nav>
 
     <script>
-        const KEY = 'TRAVEL_V5_2_STORAGE';
+        const KEY = 'TRAVEL_V5_3_STORAGE';
         let isEdit = false, curDayIdx = 0, curEventIdx = null;
 
-        const defaultTrip = (name = "新旅程", city = "Beijing") => ({
-            name, city, rate: 1.132,
-            itinerary: [{ date: "Day 1", weekday: "一", title: "準備出發", img: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800", budget: 0, events: [] }],
-            checklist: [{ task: "帶錢、帶手機", done: false }],
+        const defaultTrip = (name = "我的旅行", city = "Hong Kong") => ({
+            name, city, rate: 1.0,
+            itinerary: [{ date: "Day 1", weekday: "一", title: "開啟旅程", img: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800", budget: 0, events: [] }],
+            checklist: [{ task: "檢查護照", done: false }],
             docs: []
         });
 
-        let data = JSON.parse(localStorage.getItem(KEY)) || { activeIdx: 0, trips: [defaultTrip("北京弦動之旅", "Beijing")] };
+        let data = JSON.parse(localStorage.getItem(KEY)) || { activeIdx: 0, trips: [defaultTrip()] };
         let trip = data.trips[data.activeIdx];
 
         function save() { 
@@ -182,7 +183,7 @@
                     <button onclick="renderDay(${i})" class="day-card w-16 h-24 rounded-[1.8rem] bg-white border border-pink-50 flex flex-col items-center justify-center transition-all ${i===curDayIdx?'active':''}">
                         ${isEdit ? 
                             `<input oninput="trip.itinerary[${i}].date=this.value" value="${d.date}" class="w-12 bg-transparent text-center text-[9px] font-black outline-none border-b border-white/30 mb-1">
-                             <input oninput="trip.itinerary[${i}].weekday=this.value" value="${d.weekday}" class="w-10 bg-transparent text-center text-[10px] font-bold outline-none border-b border-white/50 text-white">` 
+                             <input oninput="trip.itinerary[${i}].weekday=this.value" value="${d.weekday}" class="w-10 bg-transparent text-center text-[10px] font-bold outline-none border-b border-white/50 text-white" placeholder="週幾">` 
                             : `<span class="text-[9px] font-black">${d.date}</span><span class="text-[10px] font-bold opacity-30 mt-1">${d.weekday}</span>`
                         }
                     </button>
@@ -194,7 +195,7 @@
         function renderCityUI() {
             const area = document.getElementById('city-area');
             if(isEdit) {
-                area.innerHTML = `<input id="city-in" oninput="trip.city=this.value" value="${trip.city}" class="text-[10px] font-black uppercase text-pink-500 bg-pink-50 w-full outline-none border-b border-pink-200 p-1">`;
+                area.innerHTML = `<input id="city-in" oninput="trip.city=this.value" value="${trip.city}" class="text-[10px] font-black uppercase text-pink-500 bg-pink-100 w-full outline-none border-b-2 border-pink-400 p-1 rounded">`;
             } else {
                 area.innerHTML = `<p class="text-[9px] text-orange-300 font-bold uppercase tracking-widest truncate">${trip.city}</p>`;
             }
@@ -209,14 +210,14 @@
         }
 
         function createNewTrip() {
-            const n = prompt("旅程名稱？", "我的旅程");
+            const n = prompt("輸入旅程名稱：", "新旅程");
             if(n) {
                 data.trips.push(defaultTrip(n));
                 switchTrip(data.trips.length - 1);
             }
         }
 
-        // --- 核心邏輯 ---
+        // --- 核心編輯切換 ---
         function toggleEdit() {
             isEdit = !isEdit;
             const btn = document.getElementById('edit-btn');
@@ -226,7 +227,10 @@
             
             document.querySelectorAll('#edit-controls, #btn-upload-banner, #btn-upload-doc, #btn-add-check').forEach(el => el.classList.toggle('hidden', !isEdit));
             
-            if(!isEdit) { save(); fetchWeather(); }
+            if(!isEdit) { 
+                save(); 
+                fetchWeather(); // 點擊完成後觸發天氣抓取
+            }
             renderDaySelector();
             renderDay(curDayIdx);
             renderCityUI();
@@ -234,6 +238,54 @@
             renderCheck();
         }
 
+        // --- 天氣抓取邏輯 (關鍵修復) ---
+        async function fetchWeather() {
+            const display = document.getElementById('weather-display');
+            const iconCont = document.getElementById('weather-icon');
+            const loader = document.getElementById('weather-loading');
+            
+            if(!trip.city) return;
+            loader.style.display = 'inline';
+
+            try {
+                // Step 1: 將城市名轉為經緯度 (使用 Open-Meteo Geocoding API)
+                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip.city)}&count=1&language=en&format=json`);
+                const geoData = await geoRes.json();
+
+                if (geoData.results && geoData.results.length > 0) {
+                    const { latitude, longitude } = geoData.results[0];
+                    
+                    // Step 2: 抓取天氣
+                    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+                    const weatherData = await weatherRes.json();
+                    
+                    const temp = Math.round(weatherData.current_weather.temperature);
+                    const code = weatherData.current_weather.weathercode;
+                    
+                    display.innerText = `${temp}°C`;
+                    updateWeatherIcon(code);
+                } else {
+                    display.innerText = "N/A";
+                }
+            } catch (err) {
+                console.error("Weather Error:", err);
+                display.innerText = "ERR";
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function updateWeatherIcon(code) {
+            const icon = document.getElementById('weather-icon');
+            // WMO Weather interpretation codes
+            if (code === 0) icon.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
+            else if (code <= 3) icon.innerHTML = '<i class="fas fa-cloud-sun text-gray-400"></i>';
+            else if (code <= 67) icon.innerHTML = '<i class="fas fa-cloud-showers-heavy text-blue-400"></i>';
+            else if (code <= 77) icon.innerHTML = '<i class="fas fa-snowflake text-blue-200"></i>';
+            else icon.innerHTML = '<i class="fas fa-bolt text-purple-400"></i>';
+        }
+
+        // --- 其他業務邏輯 ---
         function renderDay(idx) {
             curDayIdx = idx;
             const day = trip.itinerary[idx];
@@ -250,25 +302,25 @@
             timeline.innerHTML = '<div class="timeline-line"></div>';
             day.events.forEach((ev, i) => {
                 timeline.innerHTML += `
-                    <div class="relative pl-14">
+                    <div class="relative pl-14 animate-fade-in">
                         <div class="timeline-dot"></div>
                         <div class="flex justify-between items-start mb-1">
-                            <p class="text-[10px] font-black text-pink-300">${ev.time}</p>
-                            ${!isEdit ? `<span class="status-badge ${ev.status=='booked'?'status-booked':'status-pending'}">${ev.status=='booked'?'已約':'待辦'}</span>` : ''}
+                            <p class="text-[10px] font-black text-pink-300 uppercase">${ev.time}</p>
+                            ${!isEdit ? `<span class="px-2 py-0.5 rounded text-[8px] font-black ${ev.status=='booked'?'bg-green-50 text-green-500':'bg-orange-50 text-orange-500'}">${ev.status=='booked'?'已完成':'進行中'}</span>` : ''}
                         </div>
                         ${isEdit ? `
-                            <div class="bg-pink-50 p-4 rounded-2xl border border-pink-100 space-y-2">
-                                <input oninput="trip.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" placeholder="地點" class="text-sm font-bold w-full bg-transparent border-b border-pink-200 outline-none">
-                                <input oninput="trip.itinerary[${idx}].events[${i}].time=this.value" value="${ev.time}" placeholder="時間" class="text-[10px] w-full bg-transparent outline-none">
+                            <div class="bg-white/50 border border-pink-50 p-4 rounded-2xl space-y-2">
+                                <input oninput="trip.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" placeholder="地點名稱" class="text-sm font-bold w-full bg-transparent border-b border-pink-100 outline-none">
+                                <input oninput="trip.itinerary[${idx}].events[${i}].time=this.value" value="${ev.time}" placeholder="時間 (如 14:00)" class="text-[10px] w-full bg-transparent outline-none">
                                 <div class="flex gap-2">
-                                    <button onclick="curEventIdx=${i};triggerFile('event-img-input')" class="text-[9px] bg-white px-2 py-1 rounded">換圖</button>
-                                    <button onclick="trip.itinerary[${idx}].events.splice(${i},1);renderDay(${idx})" class="text-[9px] bg-white px-2 py-1 rounded text-red-400">刪除</button>
+                                    <button onclick="curEventIdx=${i};triggerFile('event-img-input')" class="text-[8px] bg-white border px-2 py-1 rounded shadow-sm">更換圖片</button>
+                                    <button onclick="trip.itinerary[${idx}].events.splice(${i},1);renderDay(${idx})" class="text-[8px] bg-red-50 text-red-400 px-2 py-1 rounded">刪除</button>
                                 </div>
                             </div>
                         ` : `
                             <div>
-                                <h3 class="font-bold text-gray-800">${ev.loc}</h3>
-                                ${ev.img ? `<img src="${ev.img}" class="mt-4 rounded-2xl w-full h-40 object-cover shadow-lg" onclick="showBig('${ev.img}')">` : ''}
+                                <h3 class="font-bold text-gray-800 leading-tight">${ev.loc}</h3>
+                                ${ev.img ? `<img src="${ev.img}" class="mt-4 rounded-3xl w-full h-40 object-cover shadow-lg active:scale-[0.98] transition-transform" onclick="showBig('${ev.img}')">` : ''}
                             </div>
                         `}
                     </div>`;
@@ -276,43 +328,32 @@
             document.querySelectorAll('.day-card').forEach((el, i) => el.classList.toggle('active', i === idx));
         }
 
-        // --- 天氣 & 匯率 ---
-        async function fetchWeather() {
-            try {
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=39.9&longitude=116.4&current_weather=true`); // Default Beijing
-                const d = await res.json();
-                document.getElementById('weather-display').innerText = `${Math.round(d.current_weather.temperature)}°C`;
-            } catch { document.getElementById('weather-display').innerText = "--°C"; }
-        }
-
+        // --- 工具功能 ---
         function convert(type) {
             const l = document.getElementById('curr-local'), h = document.getElementById('curr-home');
-            const r = trip.rate || 1.13;
+            const r = trip.rate || 1;
             if(type === 'local') h.value = (l.value * r).toFixed(1);
             else l.value = (h.value / r).toFixed(1);
         }
-
         function updateRate(v) { trip.rate = parseFloat(v) || 1; save(); }
 
-        // --- 文件與清單 ---
         function renderCheck() {
             document.getElementById('check-list').innerHTML = trip.checklist.map((c, i) => `
-                <div class="flex items-center gap-3 bg-gray-50 p-4 rounded-2xl">
+                <div class="flex items-center gap-3 bg-white p-4 rounded-2xl border border-pink-50">
                     <input type="checkbox" ${c.done?'checked':''} onchange="trip.checklist[${i}].done=this.checked;save();renderCheck()" class="w-5 h-5 accent-pink-400">
                     <span class="text-xs font-bold ${c.done?'line-through opacity-30':''}">${c.task}</span>
-                    ${isEdit ? `<button onclick="trip.checklist.splice(${i},1);save();renderCheck()" class="ml-auto text-red-200"><i class="fas fa-trash"></i></button>` : ''}
+                    ${isEdit ? `<button onclick="trip.checklist.splice(${i},1);save();renderCheck()" class="ml-auto text-red-200"><i class="fas fa-trash-alt"></i></button>` : ''}
                 </div>`).join('');
         }
 
         function renderDocs() {
             document.getElementById('doc-list').innerHTML = trip.docs.map((d, i) => `
                 <div class="relative">
-                    <img src="${d}" class="w-full aspect-square object-cover rounded-2xl border-2 border-white shadow" onclick="showBig('${d}')">
+                    <img src="${d}" class="w-full aspect-square object-cover rounded-3xl border-2 border-white shadow-md" onclick="showBig('${d}')">
                     ${isEdit ? `<button onclick="trip.docs.splice(${i},1);save();renderDocs()" class="absolute -top-1 -right-1 bg-red-400 text-white w-6 h-6 rounded-full text-[10px] border-2 border-white shadow"><i class="fas fa-times"></i></button>` : ''}
-                </div>`).join('') || '<p class="col-span-2 text-center text-[10px] opacity-20 py-10 uppercase font-black">Empty</p>';
+                </div>`).join('') || '<p class="col-span-2 text-center text-[10px] opacity-20 py-10 font-black">無文件</p>';
         }
 
-        // --- 輔助功能 ---
         function triggerFile(id) { document.getElementById(id).click(); }
         function showBig(s) { document.getElementById('lightbox-img').src = s; document.getElementById('lightbox').style.display = 'flex'; }
         
@@ -331,31 +372,24 @@
             });
         }
 
-        document.getElementById('lib-file-input').onchange = async (e) => {
-            if(e.target.files[0]) { trip.docs.push(await compress(e.target.files[0])); save(); renderDocs(); }
-        };
-        document.getElementById('banner-img-input').onchange = async (e) => {
-            if(e.target.files[0]) { trip.itinerary[curDayIdx].img = await compress(e.target.files[0]); save(); renderDay(curDayIdx); }
-        };
-        document.getElementById('event-img-input').onchange = async (e) => {
-            if(e.target.files[0]) { trip.itinerary[curDayIdx].events[curEventIdx].img = await compress(e.target.files[0]); save(); renderDay(curDayIdx); }
-        };
+        document.getElementById('lib-file-input').onchange = async (e) => { if(e.target.files[0]) { trip.docs.push(await compress(e.target.files[0])); save(); renderDocs(); } };
+        document.getElementById('banner-img-input').onchange = async (e) => { if(e.target.files[0]) { trip.itinerary[curDayIdx].img = await compress(e.target.files[0]); save(); renderDay(curDayIdx); } };
+        document.getElementById('event-img-input').onchange = async (e) => { if(e.target.files[0]) { trip.itinerary[curDayIdx].events[curEventIdx].img = await compress(e.target.files[0]); save(); renderDay(curDayIdx); } };
 
         function addDay() {
-            trip.itinerary.push({ date: `Day ${trip.itinerary.length+1}`, weekday: "-", title: "新旅程", img: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800", budget: 0, events: [] });
+            trip.itinerary.push({ date: `Day ${trip.itinerary.length+1}`, weekday: "-", title: "新的一天", img: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800", budget: 0, events: [] });
             save(); renderDaySelector(); renderDay(trip.itinerary.length-1);
         }
         function delDay(i) { trip.itinerary.splice(i, 1); save(); renderDaySelector(); renderDay(0); }
-        function addEvent() { trip.itinerary[curDayIdx].events.push({ loc: '新地點', time: '12:00', status: 'pending' }); renderDay(curDayIdx); }
+        function addEvent() { trip.itinerary[curDayIdx].events.push({ loc: '新景點/地點', time: '12:00', status: 'pending' }); renderDay(curDayIdx); }
         function addCheck() { const t = prompt('清單項目？'); if(t) { trip.checklist.push({ task: t, done: false }); save(); renderCheck(); } }
         function setTab(t) {
             document.getElementById('content-itinerary').classList.toggle('hidden', t !== 'itinerary');
             document.getElementById('content-tools').classList.toggle('hidden', t !== 'tools');
             document.getElementById('nav-itinerary').className = `flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] ${t=='itinerary'?'bg-[var(--jp-ink)] text-white shadow-xl':'text-gray-400'}`;
             document.getElementById('nav-tools').className = `flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] ${t=='tools'?'bg-[var(--jp-ink)] text-white shadow-xl':'text-gray-400'}`;
-            if(t=='tools') { renderDocs(); renderCheck(); }
         }
-        function resetAll() { if(confirm('重設？')) { localStorage.removeItem(KEY); location.reload(); } }
+        function resetAll() { if(confirm('確定清除所有旅程嗎？')) { localStorage.removeItem(KEY); location.reload(); } }
 
         window.onload = init;
     </script>
