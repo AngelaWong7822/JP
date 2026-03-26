@@ -259,7 +259,7 @@
             renderCheck();
         }
 
-        // --- 天氣抓取邏輯 (關鍵修復) ---
+        // --- 天氣抓取邏輯 ---
         async function fetchWeather() {
             const display = document.getElementById('weather-display');
             const iconCont = document.getElementById('weather-icon');
@@ -269,14 +269,11 @@
             loader.style.display = 'inline';
 
             try {
-                // Step 1: 將城市名轉為經緯度 (使用 Open-Meteo Geocoding API)
                 const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip.city)}&count=1&language=en&format=json`);
                 const geoData = await geoRes.json();
 
                 if (geoData.results && geoData.results.length > 0) {
                     const { latitude, longitude } = geoData.results[0];
-                    
-                    // Step 2: 抓取天氣
                     const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
                     const weatherData = await weatherRes.json();
                     
@@ -298,7 +295,6 @@
 
         function updateWeatherIcon(code) {
             const icon = document.getElementById('weather-icon');
-            // WMO Weather interpretation codes
             if (code === 0) icon.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
             else if (code <= 3) icon.innerHTML = '<i class="fas fa-cloud-sun text-gray-400"></i>';
             else if (code <= 67) icon.innerHTML = '<i class="fas fa-cloud-showers-heavy text-blue-400"></i>';
@@ -307,6 +303,12 @@
         }
 
         // --- 其他業務邏輯 ---
+        function toggleEventStatus(dayIdx, eventIdx) {
+            const ev = trip.itinerary[dayIdx].events[eventIdx];
+            ev.status = (ev.status === 'booked' ? 'pending' : 'booked');
+            renderDay(dayIdx);
+        }
+
         function renderDay(idx) {
             curDayIdx = idx;
             const day = trip.itinerary[idx];
@@ -331,7 +333,10 @@
                         </div>
                         ${isEdit ? `
                             <div class="bg-white/50 border border-pink-50 p-4 rounded-2xl space-y-2">
-                                <input oninput="trip.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" placeholder="地點名稱" class="text-sm font-bold w-full bg-transparent border-b border-pink-100 outline-none">
+                                <div class="flex justify-between items-center">
+                                    <input oninput="trip.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" placeholder="地點名稱" class="text-sm font-bold bg-transparent border-b border-pink-100 outline-none flex-1">
+                                    <button onclick="toggleEventStatus(${idx}, ${i})" class="ml-2 px-2 py-1 rounded text-[8px] font-black ${ev.status=='booked'?'bg-green-500 text-white':'bg-orange-400 text-white'}">${ev.status=='booked'?'完成':'進行'}</button>
+                                </div>
                                 <input oninput="trip.itinerary[${idx}].events[${i}].time=this.value" value="${ev.time}" placeholder="時間 (如 14:00)" class="text-[10px] w-full bg-transparent outline-none">
                                 <div class="flex gap-2">
                                     <button onclick="curEventIdx=${i};triggerFile('event-img-input')" class="text-[8px] bg-white border px-2 py-1 rounded shadow-sm">更換圖片</button>
