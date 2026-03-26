@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>北京「弦動古都」旅行筆記</title>
+    <title>北京「弦動古都」旅行筆記 V3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
-        :root { --cute-pink: #FF85A1; --jp-ink: #2D3436; }
-        body { font-family: 'Noto Sans JP', sans-serif; background-color: #FFF9F9; color: var(--jp-ink); -webkit-tap-highlight-color: transparent; }
+        :root { --cute-pink: #FF85A1; --jp-ink: #2D3436; --soft-bg: #FFF9F9; }
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: var(--soft-bg); color: var(--jp-ink); -webkit-tap-highlight-color: transparent; }
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .day-card.active { background: var(--cute-pink); color: white; transform: scale(1.1); box-shadow: 0 10px 20px rgba(255,133,161,0.3); }
@@ -17,8 +17,11 @@
         .timeline-dot { position: absolute; left: 18px; width: 16px; height: 16px; border-radius: 50%; background: var(--cute-pink); border: 4px solid white; z-index: 10; margin-top: 4px; }
         #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; }
         #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10001; justify-content: center; align-items: center; }
-        .animate-pop { animation: pop 0.3s ease-out; }
-        @keyframes pop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .status-badge { font-size: 8px; padding: 2px 6px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
+        .status-booked { background: #E1F9F0; color: #1DB954; }
+        .status-pending { background: #FFF4E5; color: #FF9800; }
     </style>
 </head>
 <body class="pb-36">
@@ -32,108 +35,155 @@
     </div>
 
     <div id="lightbox" onclick="this.style.display='none'">
-        <img id="lightbox-img" class="max-w-[90%] max-h-[80vh] rounded-2xl border-4 border-white">
+        <img id="lightbox-img" class="max-w-[90%] max-h-[80vh] rounded-2xl border-4 border-white shadow-2xl">
     </div>
 
+    <!-- Header -->
     <header class="sticky top-0 z-50 glass border-b border-pink-50 px-6 py-4 flex justify-between items-center">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-[var(--cute-pink)] rounded-2xl flex items-center justify-center text-white shadow-lg rotate-3"><i class="fas fa-heart"></i></div>
-            <h1 class="text-base font-black text-gray-800">北京小旅行</h1>
+            <div class="w-10 h-10 bg-[var(--cute-pink)] rounded-2xl flex items-center justify-center text-white shadow-lg rotate-3">
+                <i class="fas fa-violin"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-black text-gray-800">弦動古都</h1>
+                <p class="text-[8px] font-bold text-pink-300 tracking-tighter">BEIJING TRIP • V3.0</p>
+            </div>
         </div>
         <div class="flex gap-2">
-            <button onclick="resetData()" class="p-2 text-gray-300"><i class="fas fa-sync-alt"></i></button>
-            <button id="edit-btn" onclick="toggleEdit()" class="px-5 py-2 bg-[var(--jp-ink)] text-white rounded-2xl font-black text-[11px]">編輯行程</button>
+            <button onclick="resetData()" class="p-2 text-gray-300 hover:text-red-400 transition-colors"><i class="fas fa-undo-alt"></i></button>
+            <button id="edit-btn" onclick="toggleEdit()" class="px-5 py-2 bg-[var(--jp-ink)] text-white rounded-2xl font-black text-[11px] shadow-lg active:scale-95 transition-all">編輯行程</button>
         </div>
     </header>
 
     <main class="max-w-md mx-auto p-4 space-y-6">
         <section id="content-itinerary" class="space-y-6">
+            <!-- Widgets -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-white p-4 rounded-[2rem] shadow-sm flex items-center gap-3 border border-pink-50">
-                    <div id="weather-icon" class="text-2xl text-orange-300"><i class="fas fa-sun"></i></div>
+                    <div id="weather-icon" class="text-2xl text-orange-300"><i class="fas fa-cloud-sun"></i></div>
                     <div>
                         <p id="weather-display" class="text-xs font-black text-gray-700">載入中...</p>
-                        <p class="text-[9px] text-orange-300 font-bold uppercase">北京天氣</p>
+                        <p class="text-[9px] text-orange-300 font-bold uppercase tracking-widest">Beijing</p>
                     </div>
                 </div>
                 <div class="bg-white p-4 rounded-[2rem] shadow-sm border border-pink-50">
                     <div class="flex items-center gap-1">
-                        <input type="number" id="cny-input" oninput="convertCurrency('cny')" placeholder="¥ CNY" class="w-full bg-gray-50 rounded-xl p-1.5 text-[10px] font-black outline-none">
-                        <span class="text-pink-200 text-[10px]">❤</span>
+                        <input type="number" id="cny-input" oninput="convertCurrency('cny')" placeholder="¥ CNY" class="w-full bg-gray-50 rounded-xl p-1.5 text-[10px] font-black outline-none focus:bg-pink-50 transition-colors">
+                        <span class="text-pink-200 text-[10px] animate-pulse">❤</span>
                         <input type="number" id="hkd-input" oninput="convertCurrency('hkd')" placeholder="$ HKD" class="w-full bg-pink-50 rounded-xl p-1.5 text-[10px] font-black outline-none">
                     </div>
-                    <p class="text-[8px] text-gray-400 font-bold mt-1 text-center">匯率 1.13</p>
+                    <p class="text-[8px] text-gray-400 font-bold mt-1 text-center italic">Rate 1.132</p>
                 </div>
             </div>
 
-            <div class="flex gap-4 overflow-x-auto no-scrollbar py-2" id="day-selector"></div>
+            <!-- Day Selector -->
+            <div class="flex gap-4 overflow-x-auto no-scrollbar py-2 px-1" id="day-selector"></div>
 
-            <div class="bg-white rounded-[3rem] overflow-hidden shadow-xl border border-white relative">
-                <div id="day-banner" class="h-56 relative bg-gray-100">
-                    <img id="day-img" src="" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    <button id="banner-upload-btn" onclick="triggerInput('banner-img-input')" class="hidden absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl text-white flex items-center justify-center"><i class="fas fa-camera"></i></button>
-                    <div class="absolute bottom-6 left-6 right-6 flex justify-between items-end text-white">
-                        <div>
-                            <span id="day-label" class="px-2 py-1 bg-[var(--cute-pink)] rounded-lg text-[9px] font-black mb-1 inline-block">DAY 1</span>
+            <!-- Main Card -->
+            <div class="bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-white relative">
+                <div id="day-banner" class="h-60 relative bg-gray-100 group">
+                    <img id="day-img" src="" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                    <button id="banner-upload-btn" onclick="triggerInput('banner-img-input')" class="hidden absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl text-white flex items-center justify-center border border-white/30"><i class="fas fa-camera"></i></button>
+                    
+                    <div class="absolute bottom-6 left-8 right-8 flex justify-between items-end text-white">
+                        <div class="flex-1">
+                            <span id="day-label" class="px-2 py-1 bg-[var(--cute-pink)] rounded-lg text-[9px] font-black mb-2 inline-block shadow-md">DAY 1</span>
                             <div id="day-title-container"></div>
                         </div>
-                        <p id="day-budget" class="text-xl font-black italic">¥ 0</p>
+                        <div class="text-right">
+                            <p class="text-[9px] font-bold opacity-70 uppercase tracking-widest mb-1">Estimated Budget</p>
+                            <div id="day-budget-container" class="text-2xl font-black italic tracking-tighter"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="p-8 relative">
-                    <div id="timeline" class="space-y-8 relative min-h-[100px]"></div>
-                    <div id="add-event-container" class="hidden mt-8">
-                        <button onclick="addEvent()" class="w-full py-4 border-2 border-dashed border-pink-100 rounded-2xl text-pink-300 font-bold text-xs">+ 新增景點</button>
+
+                <div class="p-8 pt-10 relative bg-[url('https://www.transparenttextures.com/patterns/pinstripe.png')]">
+                    <div id="timeline" class="space-y-10 relative min-h-[100px]"></div>
+                    <div id="add-event-container" class="hidden mt-10">
+                        <button onclick="addEvent()" class="w-full py-5 border-2 border-dashed border-pink-100 rounded-[2rem] text-pink-300 font-bold text-xs hover:bg-pink-50 transition-colors">+ 新增行程景點</button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section id="content-tools" class="hidden space-y-6">
-            <div class="bg-[var(--jp-ink)] p-8 rounded-[3rem] text-white">
+        <section id="content-tools" class="hidden space-y-6 pb-10">
+            <!-- Travel Japanese Cards -->
+            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-8 rounded-[3rem] text-white shadow-xl">
+                <h2 class="text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-language text-lg"></i> 旅行日文 N5 短語
+                </h2>
+                <div class="grid grid-cols-1 gap-3" id="jp-phrase-list">
+                    <!-- Added by JS -->
+                </div>
+            </div>
+
+            <!-- Documents -->
+            <div class="bg-[var(--jp-ink)] p-8 rounded-[3rem] text-white shadow-xl">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-sm font-black uppercase tracking-widest">重要文件備份</h2>
-                    <button id="add-doc-btn" onclick="triggerInput('lib-file-input')" class="hidden px-4 py-2 bg-[var(--cute-pink)] rounded-xl text-[10px] font-black">上傳</button>
+                    <div>
+                        <h2 class="text-sm font-black uppercase tracking-widest">重要文件備份</h2>
+                        <p class="text-[8px] opacity-40">回鄉證、酒店訂單影印本</p>
+                    </div>
+                    <button id="add-doc-btn" onclick="triggerInput('lib-file-input')" class="hidden px-4 py-2 bg-[var(--cute-pink)] rounded-xl text-[10px] font-black shadow-lg">上傳檔案</button>
                 </div>
                 <div id="document-list" class="grid grid-cols-2 gap-4"></div>
             </div>
 
-            <div class="bg-white p-8 rounded-[3rem] border border-pink-50">
+            <!-- Packing List -->
+            <div class="bg-white p-8 rounded-[3rem] border border-pink-50 shadow-lg">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-sm font-black text-gray-800">行李清單</h2>
-                    <button id="add-check-btn" onclick="addCheckItem()" class="hidden px-3 py-1 bg-pink-50 text-pink-500 rounded-lg text-[10px]">+ 新增</button>
+                    <h2 class="text-sm font-black text-gray-800">行李清單 Check</h2>
+                    <button id="add-check-btn" onclick="addCheckItem()" class="hidden px-4 py-1.5 bg-pink-50 text-pink-500 rounded-xl text-[10px] font-bold">+ 新增</button>
                 </div>
                 <div id="checklist" class="space-y-3"></div>
             </div>
         </section>
     </main>
 
-    <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[85%] max-w-sm glass rounded-[2.5rem] border border-white shadow-2xl z-[100] flex p-2 gap-2">
-        <button onclick="switchTab('itinerary')" id="tab-itinerary" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] bg-[var(--jp-ink)] text-white">
-            <i class="fas fa-map-marked-alt text-sm"></i><span class="text-[9px] font-black">行程</span>
+    <!-- Navigation -->
+    <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass rounded-[2.5rem] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] z-[100] flex p-2 gap-2">
+        <button onclick="switchTab('itinerary')" id="tab-itinerary" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] transition-all duration-300">
+            <i class="fas fa-map-location-dot text-sm"></i>
+            <span class="text-[9px] font-black">行程規劃</span>
         </button>
-        <button onclick="switchTab('tools')" id="tab-tools" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-gray-400">
-            <i class="fas fa-toolbox text-sm"></i><span class="text-[9px] font-black">工具</span>
+        <button onclick="switchTab('tools')" id="tab-tools" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] transition-all duration-300 text-gray-400">
+            <i class="fas fa-suitcase-rolling text-sm"></i>
+            <span class="text-[9px] font-black">工具備忘</span>
         </button>
     </nav>
 
     <script>
-        const STORE_KEY = 'BEIJING_V2';
+        const STORE_KEY = 'BEIJING_V3_MASTER';
         const rate = 1.132;
         let currentDayIdx = 0, isEditing = false, activeEventIdx = null;
 
         const defaultData = {
             itinerary: [
-                { date: "4/2", weekday: "四", title: "抵達北京 · 大提琴之行", img: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800", events: [] },
-                { date: "4/3", weekday: "五", title: "故宮探索", img: "https://images.unsplash.com/photo-1547984609-4b7497268d91?w=800", events: [] },
-                { date: "4/4", weekday: "六", title: "頤和園巡禮", img: "https://images.unsplash.com/photo-1599571234909-29ed5d13c1d6?w=800", events: [] },
-                { date: "4/5", weekday: "日", title: "萬里長城", img: "https://images.unsplash.com/photo-1547150624-8904471f005a?w=800", events: [] },
-                { date: "4/6", weekday: "一", title: "北京胡同", img: "https://images.unsplash.com/photo-1584348259051-700683070737?w=800", events: [] },
-                { date: "4/7", weekday: "二", title: "賦歸", img: "https://images.unsplash.com/photo-1518544861942-835384168015?w=800", events: [] }
+                { date: "4/2", weekday: "四", title: "抵達北京 · 弦樂之約", img: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800", budget: 500, events: [
+                    { loc: "北京首都機場", time: "14:30", desc: "領取行李、辦理流量卡", status: "booked" },
+                    { loc: "三里屯", time: "18:00", desc: "晚餐與城市散步", status: "pending" }
+                ] },
+                { date: "4/3", weekday: "五", title: "紫禁城深度遊", img: "https://images.unsplash.com/photo-1547984609-4b7497268d91?w=800", budget: 300, events: [
+                    { loc: "故宮博物院", time: "09:00", desc: "需提前7天微信預約", status: "booked" }
+                ] },
+                { date: "4/4", weekday: "六", title: "頤和園巡禮", img: "https://images.unsplash.com/photo-1599571234909-29ed5d13c1d6?w=800", budget: 200, events: [] },
+                { date: "4/5", weekday: "日", title: "居庸關長城", img: "https://images.unsplash.com/photo-1547150624-8904471f005a?w=800", budget: 400, events: [] },
+                { date: "4/6", weekday: "一", title: "什剎海胡同", img: "https://images.unsplash.com/photo-1584348259051-700683070737?w=800", budget: 250, events: [] },
+                { date: "4/7", weekday: "二", title: "賦歸 · 平安回家", img: "https://images.unsplash.com/photo-1518544861942-835384168015?w=800", budget: 100, events: [] }
             ],
-            checklist: [{ task: "回鄉證", done: true }, { task: "充電寶", done: false }],
-            documents: []
+            checklist: [
+                { task: "回鄉證 (證件類)", done: true }, 
+                { task: "大提琴及配件", done: false },
+                { task: "插頭轉換器", done: false },
+                { task: "北京交通卡 (APP下載)", done: true }
+            ],
+            documents: [],
+            phrases: [
+                { jp: "すみません、ここはどこですか？", cn: "不好意思，請問這裡是哪裡？" },
+                { jp: "お会計をお願いします。", cn: "請幫我結帳。" },
+                { jp: "写真を撮ってもいいですか？", cn: "可以拍照嗎？" }
+            ]
         };
 
         let appData = JSON.parse(localStorage.getItem(STORE_KEY)) || defaultData;
@@ -142,7 +192,6 @@
         function triggerInput(id) { document.getElementById(id).click(); }
         function openLightbox(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').style.display = 'flex'; }
 
-        // 圖片壓縮
         async function compress(file) {
             return new Promise(res => {
                 const reader = new FileReader(); reader.readAsDataURL(file);
@@ -160,7 +209,6 @@
             });
         }
 
-        // 文件上傳
         document.getElementById('lib-file-input').onchange = async (e) => {
             if(!e.target.files[0]) return;
             const data = await compress(e.target.files[0]);
@@ -168,23 +216,17 @@
             saveData(); renderDocs();
         };
 
-        // 景點照片上傳
-        document.getElementById('event-img-input').onchange = async (e) => {
+        document.getElementById('banner-img-input').onchange = async (e) => {
             if(!e.target.files[0]) return;
-            const data = await compress(e.target.files[0]);
-            appData.itinerary[currentDayIdx].events[activeEventIdx].img = data;
+            appData.itinerary[currentDayIdx].img = await compress(e.target.files[0]);
             saveData(); renderDay(currentDayIdx);
         };
 
-        function renderDocs() {
-            const list = document.getElementById('document-list');
-            list.innerHTML = appData.documents.map((d, i) => `
-                <div class="relative animate-pop">
-                    <img src="${d.data}" class="w-full aspect-square object-cover rounded-2xl" onclick="openLightbox('${d.data}')">
-                    ${isEditing ? `<button onclick="appData.documents.splice(${i},1);saveData();renderDocs()" class="absolute -top-2 -right-2 bg-red-500 w-6 h-6 rounded-full text-[10px]"><i class="fas fa-times"></i></button>` : ''}
-                </div>
-            `).join('') || '<p class="col-span-2 text-center opacity-30 text-xs py-10">暫無文件</p>';
-        }
+        document.getElementById('event-img-input').onchange = async (e) => {
+            if(!e.target.files[0]) return;
+            appData.itinerary[currentDayIdx].events[activeEventIdx].img = await compress(e.target.files[0]);
+            saveData(); renderDay(currentDayIdx);
+        };
 
         function renderDay(idx) {
             currentDayIdx = idx;
@@ -193,22 +235,47 @@
             document.getElementById('day-label').innerText = `第 ${idx+1} 天 · ${day.date}`;
             
             const titleCont = document.getElementById('day-title-container');
-            titleCont.innerHTML = isEditing ? `<input oninput="appData.itinerary[${idx}].title=this.value" value="${day.title}" class="bg-transparent border-b border-white outline-none w-full text-xl font-bold">` : `<h2 class="text-2xl font-black drop-shadow-md">${day.title}</h2>`;
+            titleCont.innerHTML = isEditing ? 
+                `<input oninput="appData.itinerary[${idx}].title=this.value" value="${day.title}" class="bg-white/20 border-b-2 border-white outline-none w-full text-xl font-bold p-1">` : 
+                `<h2 class="text-2xl font-black drop-shadow-md">${day.title}</h2>`;
+
+            const budgetCont = document.getElementById('day-budget-container');
+            budgetCont.innerHTML = isEditing ? 
+                `<input type="number" oninput="appData.itinerary[${idx}].budget=this.value" value="${day.budget || 0}" class="bg-white/20 w-24 text-right outline-none border-b-2 border-white">` : 
+                `¥ ${day.budget || 0}`;
 
             const timeline = document.getElementById('timeline');
             timeline.innerHTML = '<div class="timeline-line"></div>';
             day.events.forEach((ev, i) => {
                 timeline.innerHTML += `
-                    <div class="relative pl-12 animate-pop">
+                    <div class="relative pl-14 animate-pop">
                         <div class="timeline-dot"></div>
-                        <p class="text-[10px] font-black text-pink-200">${ev.time || '09:00'}</p>
+                        <div class="flex justify-between items-start mb-1">
+                            <p class="text-[10px] font-black text-pink-300 tracking-tighter">${ev.time || '09:00'}</p>
+                            ${!isEditing ? `<span class="status-badge ${ev.status === 'booked' ? 'status-booked' : 'status-pending'}">${ev.status === 'booked' ? 'Booked' : 'Pending'}</span>` : ''}
+                        </div>
                         ${isEditing ? `
-                            <input oninput="appData.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" class="text-sm font-bold w-full bg-pink-50 p-1 rounded">
-                            <button onclick="activeEventIdx=${i};triggerInput('event-img-input')" class="text-[9px] text-blue-400 mt-2 block">上傳照片</button>
+                            <div class="space-y-2 bg-pink-50 p-4 rounded-2xl border border-pink-100 shadow-inner">
+                                <input oninput="appData.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" placeholder="景點名稱" class="text-sm font-bold w-full bg-transparent border-b border-pink-200 outline-none">
+                                <input oninput="appData.itinerary[${idx}].events[${i}].time=this.value" value="${ev.time}" placeholder="時間" class="text-[10px] font-bold w-full bg-transparent outline-none">
+                                <select onchange="appData.itinerary[${idx}].events[${i}].status=this.value" class="text-[10px] bg-white border rounded p-1">
+                                    <option value="pending" ${ev.status==='pending'?'selected':''}>待辦/待約</option>
+                                    <option value="booked" ${ev.status==='booked'?'selected':''}>已完成/已約</option>
+                                </select>
+                                <div class="flex gap-2">
+                                    <button onclick="activeEventIdx=${i};triggerInput('event-img-input')" class="text-[9px] bg-white px-2 py-1 rounded shadow-sm text-blue-500">上傳圖片</button>
+                                    <button onclick="appData.itinerary[${idx}].events.splice(${i},1);renderDay(${idx})" class="text-[9px] bg-white px-2 py-1 rounded shadow-sm text-red-500">刪除</button>
+                                </div>
+                            </div>
                         ` : `
-                            <h3 class="font-bold text-gray-800">${ev.loc}</h3>
-                            <p class="text-xs text-gray-500">${ev.desc || ''}</p>
-                            ${ev.img ? `<img src="${ev.img}" class="mt-3 rounded-2xl w-full h-32 object-cover" onclick="openLightbox('${ev.img}')">` : ''}
+                            <div class="group">
+                                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                                    ${ev.loc}
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.loc)}" target="_blank" class="text-blue-300 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-location-arrow"></i></a>
+                                </h3>
+                                <p class="text-[11px] text-gray-500 mt-1 leading-relaxed">${ev.desc || ''}</p>
+                                ${ev.img ? `<img src="${ev.img}" class="mt-4 rounded-[1.5rem] w-full h-40 object-cover shadow-lg active:scale-95 transition-transform" onclick="openLightbox('${ev.img}')">` : ''}
+                            </div>
                         `}
                     </div>`;
             });
@@ -218,8 +285,9 @@
         function toggleEdit() {
             isEditing = !isEditing;
             const btn = document.getElementById('edit-btn');
-            btn.innerText = isEditing ? '儲存' : '編輯行程';
+            btn.innerText = isEditing ? '儲存更新' : '編輯行程';
             btn.classList.toggle('bg-green-500', isEditing);
+            btn.classList.toggle('bg-[var(--jp-ink)]', !isEditing);
             document.querySelectorAll('#add-event-container, #banner-upload-btn, #add-doc-btn, #add-check-btn').forEach(el => el.classList.toggle('hidden', !isEditing));
             if(!isEditing) saveData();
             renderDay(currentDayIdx); renderDocs(); renderCheck();
@@ -235,41 +303,87 @@
             try {
                 const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=39.9&longitude=116.4&current_weather=true');
                 const data = await res.json();
-                document.getElementById('weather-display').innerText = `${Math.round(data.current_weather.temperature)}°C 北京`;
-            } catch { document.getElementById('weather-display').innerText = '15°C 北京'; }
+                document.getElementById('weather-display').innerText = `${Math.round(data.current_weather.temperature)}°C Beijing`;
+                const code = data.current_weather.weathercode;
+                const icon = document.getElementById('weather-icon');
+                if(code > 50) icon.innerHTML = '<i class="fas fa-cloud-rain text-blue-300"></i>';
+                else icon.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
+            } catch { document.getElementById('weather-display').innerText = '12°C Beijing'; }
         }
 
         function initSelector() {
             document.getElementById('day-selector').innerHTML = appData.itinerary.map((d, i) => `
-                <button onclick="renderDay(${i})" class="day-card flex-shrink-0 w-16 h-20 rounded-[1.5rem] bg-white border border-pink-50 flex flex-col items-center justify-center">
-                    <span class="text-[10px] font-bold">${d.date}</span>
-                    <span class="text-[8px] opacity-40">週${d.weekday}</span>
+                <button onclick="renderDay(${i})" class="day-card flex-shrink-0 w-16 h-20 rounded-[1.8rem] bg-white border border-pink-50 flex flex-col items-center justify-center transition-all">
+                    <span class="text-[10px] font-black">${d.date}</span>
+                    <span class="text-[8px] font-bold opacity-30 mt-1">周${d.weekday}</span>
                 </button>
+            `).join('');
+        }
+
+        function renderPhrases() {
+            document.getElementById('jp-phrase-list').innerHTML = appData.phrases.map(p => `
+                <div class="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 hover:bg-white/20 transition-colors">
+                    <p class="text-xs font-black tracking-tight">${p.jp}</p>
+                    <p class="text-[10px] opacity-70 mt-1">${p.cn}</p>
+                </div>
             `).join('');
         }
 
         function renderCheck() {
             document.getElementById('checklist').innerHTML = appData.checklist.map((c, i) => `
-                <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-xl">
-                    <input type="checkbox" ${c.done ? 'checked' : ''} onchange="appData.checklist[${i}].done=this.checked;saveData()">
-                    <span class="text-xs ${c.done ? 'line-through opacity-40' : ''}">${c.task}</span>
+                <div class="flex items-center gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100 group">
+                    <input type="checkbox" ${c.done ? 'checked' : ''} onchange="appData.checklist[${i}].done=this.checked;saveData();renderCheck()" class="w-5 h-5 accent-pink-400">
+                    <span class="text-xs font-bold ${c.done ? 'line-through opacity-30' : 'text-gray-700'}">${c.task}</span>
+                    ${isEditing ? `<button onclick="appData.checklist.splice(${i},1);saveData();renderCheck()" class="ml-auto text-red-300"><i class="fas fa-trash-alt text-[10px]"></i></button>` : ''}
                 </div>
             `).join('');
         }
 
-        function switchTab(tab) {
-            document.getElementById('content-itinerary').style.display = tab === 'itinerary' ? 'block' : 'none';
-            document.getElementById('content-tools').style.display = tab === 'tools' ? 'block' : 'none';
-            document.getElementById('tab-itinerary').className = tab === 'itinerary' ? 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] bg-[var(--jp-ink)] text-white' : 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-gray-400';
-            document.getElementById('tab-tools').className = tab === 'tools' ? 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] bg-[var(--jp-ink)] text-white' : 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-gray-400';
-            if(tab === 'tools') { renderDocs(); renderCheck(); }
+        function renderDocs() {
+            const list = document.getElementById('document-list');
+            list.innerHTML = appData.documents.map((d, i) => `
+                <div class="relative animate-pop group">
+                    <img src="${d.data}" class="w-full aspect-square object-cover rounded-3xl shadow-md border-2 border-white group-hover:brightness-75 transition-all" onclick="openLightbox('${d.data}')">
+                    ${isEditing ? `<button onclick="appData.documents.splice(${i},1);saveData();renderDocs()" class="absolute -top-2 -right-2 bg-red-500 w-7 h-7 rounded-full text-[10px] border-2 border-white shadow-lg"><i class="fas fa-times"></i></button>` : ''}
+                </div>
+            `).join('') || '<p class="col-span-2 text-center opacity-30 text-[10px] py-10 font-bold tracking-widest uppercase">No Documents</p>';
         }
 
-        function addEvent() { appData.itinerary[currentDayIdx].events.push({ loc: '新景點', desc: '', time: '09:00' }); renderDay(currentDayIdx); }
-        function addCheckItem() { const t = prompt('清單內容？'); if(t) { appData.checklist.push({ task: t, done: false }); renderCheck(); } }
-        function resetData() { if(confirm('清除所有資料？')) { localStorage.clear(); location.reload(); } }
+        function switchTab(tab) {
+            document.getElementById('content-itinerary').classList.toggle('hidden', tab !== 'itinerary');
+            document.getElementById('content-tools').classList.toggle('hidden', tab !== 'tools');
+            
+            const tabBtn = (id) => document.getElementById(id);
+            if(tab === 'itinerary') {
+                tabBtn('tab-itinerary').className = 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] bg-[var(--jp-ink)] text-white shadow-xl';
+                tabBtn('tab-tools').className = 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-gray-400';
+            } else {
+                tabBtn('tab-tools').className = 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] bg-[var(--jp-ink)] text-white shadow-xl';
+                tabBtn('tab-itinerary').className = 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-gray-400';
+                renderDocs(); renderCheck(); renderPhrases();
+            }
+        }
 
-        window.onload = () => { initSelector(); renderDay(0); fetchWeather(); };
+        function addEvent() { 
+            appData.itinerary[currentDayIdx].events.push({ loc: '新景點', desc: '景點描述或預約號', time: '10:00', status: 'pending' }); 
+            renderDay(currentDayIdx); 
+        }
+        
+        function addCheckItem() { 
+            const t = prompt('清單項目？'); 
+            if(t) { appData.checklist.push({ task: t, done: false }); saveData(); renderCheck(); } 
+        }
+        
+        function resetData() { 
+            if(confirm('注意：將清除所有修改內容，恢復預設行程。確定嗎？')) { localStorage.removeItem(STORE_KEY); location.reload(); } 
+        }
+
+        window.onload = () => { 
+            initSelector(); 
+            renderDay(0); 
+            fetchWeather(); 
+            switchTab('itinerary');
+        };
     </script>
 </body>
 </html>
