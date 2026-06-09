@@ -36,7 +36,7 @@
     <div id="toast" role="status"></div>
 
     <!-- Header -->
-    <header class="sticky top-0 z-50 glass border-b border-default px-4 py-3 flex justify-between items-center relative">
+    <header class="app-header sticky top-0 z-50 glass border-b border-default px-4 py-3 flex justify-between items-center relative">
         <div class="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
             <button type="button" id="header-menu-btn" onclick="toggleHeaderMenu()" class="flex-shrink-0 w-11 h-11 bg-[var(--cute-pink)] rounded-2xl flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform" aria-label="旅程選單" aria-expanded="false" aria-controls="header-menu">
                 <i class="fas fa-plane-departure"></i>
@@ -47,9 +47,9 @@
             </div>
         </div>
         <div id="header-actions" class="header-actions shrink-0 ml-2">
-            <button type="button" id="travel-mode-btn" onclick="toggleTravelMode()" class="header-mode-btn header-icon-btn" aria-pressed="false" aria-label="出門模式">
+            <button type="button" id="travel-mode-btn" onclick="toggleTravelMode()" class="header-mode-btn header-mode-btn-labeled" aria-pressed="false" aria-label="出門模式">
                 <i class="fas fa-suitcase-rolling" aria-hidden="true"></i>
-                <span id="travel-mode-btn-label" class="sr-only">出門</span>
+                <span id="travel-mode-btn-label" class="header-mode-btn-text">出門</span>
             </button>
             <button type="button" id="edit-btn" onclick="toggleEdit()" class="header-mode-btn header-icon-btn hidden" aria-label="編輯行程"><i class="fas fa-pen" aria-hidden="true"></i></button>
         </div>
@@ -69,22 +69,6 @@
             <div id="itinerary-edit-banner" class="itinerary-edit-banner hidden" role="status">
                 <span class="itinerary-edit-banner-text"><i class="fas fa-pen" aria-hidden="true"></i> 編輯中</span>
                 <button type="button" class="itinerary-edit-banner-done" onclick="toggleEdit()" aria-label="完成編輯">完成</button>
-            </div>
-
-            <button type="button" id="trip-schedule-summary" class="trip-schedule-summary w-full" onclick="toggleTripSchedule()" aria-expanded="false" aria-controls="trip-schedule-bar">
-                <span id="trip-schedule-summary-text" class="type-caption font-bold text-primary truncate">規劃設定</span>
-                <i id="trip-schedule-summary-chevron" class="fas fa-chevron-down text-muted text-xs shrink-0" aria-hidden="true"></i>
-            </button>
-
-            <div id="trip-schedule-bar" class="hidden bg-surface p-4 rounded-[1.5rem] border border-default shadow-sm space-y-2">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="type-caption text-secondary font-bold shrink-0">出發日期</span>
-                    <input type="date" id="start-date-input" onchange="onStartDateChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary flex-1 min-w-[140px] border border-default min-h-[2.5rem]">
-                    <span class="type-caption text-secondary font-bold shrink-0">行程</span>
-                    <input type="number" id="trip-days-input" min="1" max="30" onchange="onTripDaysChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary w-16 border border-default min-h-[2.5rem] text-center" inputmode="numeric">
-                    <span class="type-caption text-secondary font-bold shrink-0">天</span>
-                </div>
-                <p id="pill-hint" class="type-micro text-muted">設定出發日期後，pill 會顯示月日同每日景點預估</p>
             </div>
 
             <div id="itinerary-sticky-bar" class="itinerary-sticky-bar">
@@ -142,6 +126,22 @@
 
         <!-- Tools Tab -->
         <section id="content-tools" class="hidden space-y-4 pb-10 tab-panel">
+            <button type="button" id="trip-schedule-summary" class="trip-schedule-summary w-full" onclick="toggleTripSchedule()" aria-expanded="false" aria-controls="trip-schedule-bar">
+                <span id="trip-schedule-summary-text" class="type-caption font-bold text-primary truncate">規劃設定</span>
+                <i id="trip-schedule-summary-chevron" class="fas fa-chevron-down text-muted text-xs shrink-0" aria-hidden="true"></i>
+            </button>
+
+            <div id="trip-schedule-bar" class="hidden bg-surface p-4 rounded-[1.5rem] border border-default shadow-sm space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="type-caption text-secondary font-bold shrink-0">出發日期</span>
+                    <input type="date" id="start-date-input" onchange="onStartDateChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary flex-1 min-w-[140px] border border-default min-h-[2.5rem]">
+                    <span class="type-caption text-secondary font-bold shrink-0">行程</span>
+                    <input type="number" id="trip-days-input" min="1" max="30" onchange="onTripDaysChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary w-16 border border-default min-h-[2.5rem] text-center" inputmode="numeric">
+                    <span class="type-caption text-secondary font-bold shrink-0">天</span>
+                </div>
+                <p id="pill-hint" class="type-micro text-muted">設定出發日期後，pill 會顯示月日同每日景點預估</p>
+            </div>
+
             <p id="tools-group-travel" class="tools-group-heading">出門必備</p>
 
             <div class="tools-travel-grid">
@@ -300,8 +300,15 @@
         <!-- Today Tab -->
         <section id="content-today" class="hidden space-y-4 pb-10 tab-panel">
             <div id="travel-dashboard" class="bg-surface rounded-[1.5rem] border border-default shadow-sm dashboard-card">
+                <button type="button" id="dashboard-travel-toggle" class="dashboard-travel-toggle w-full" onclick="toggleTravelMode()" aria-pressed="false" aria-label="出門模式">
+                    <span class="dashboard-travel-toggle-main">
+                        <i class="fas fa-suitcase-rolling" aria-hidden="true"></i>
+                        <span id="dashboard-travel-label">出門模式</span>
+                    </span>
+                    <span id="dashboard-travel-state" class="dashboard-travel-state">關</span>
+                </button>
                 <div class="dashboard-top">
-                    <h2 id="dashboard-title" class="dashboard-section-label"><i class="fas fa-calendar-day text-accent mr-1"></i>今日總覽</h2>
+                    <h2 id="dashboard-title" class="sr-only">今日總覽</h2>
                     <p id="dashboard-hint" class="hidden dashboard-hint"></p>
                     <p id="dashboard-day-title" class="dashboard-day-heading hidden"></p>
                 </div>
@@ -326,16 +333,16 @@
     </button>
 
     <!-- Navigation -->
-    <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass rounded-[2.5rem] border border-default shadow-2xl z-[100] flex p-2 gap-2" aria-label="主選單">
-        <button type="button" onclick="setTab('today')" id="nav-today" class="nav-tab-active flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem]">
+    <nav class="app-bottom-nav fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass rounded-[2.5rem] border border-default shadow-2xl z-[100] flex p-1.5 gap-1.5" aria-label="主選單">
+        <button type="button" onclick="setTab('today')" id="nav-today" class="nav-tab-active flex-1 py-3 flex flex-col items-center gap-0.5 rounded-[2rem]">
             <i class="fas fa-calendar-day text-sm" aria-hidden="true"></i>
             <span class="nav-tab-label">今日</span>
         </button>
-        <button type="button" onclick="setTab('itinerary')" id="nav-itinerary" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-muted">
+        <button type="button" onclick="setTab('itinerary')" id="nav-itinerary" class="flex-1 py-3 flex flex-col items-center gap-0.5 rounded-[2rem] text-muted">
             <i class="fas fa-map-marked-alt text-sm" aria-hidden="true"></i>
             <span class="nav-tab-label">行程</span>
         </button>
-        <button type="button" onclick="setTab('tools')" id="nav-tools" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-muted">
+        <button type="button" onclick="setTab('tools')" id="nav-tools" class="flex-1 py-3 flex flex-col items-center gap-0.5 rounded-[2rem] text-muted">
             <i class="fas fa-briefcase text-sm" aria-hidden="true"></i>
             <span class="nav-tab-label">工具</span>
         </button>

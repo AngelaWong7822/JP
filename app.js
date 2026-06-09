@@ -636,7 +636,7 @@ function goToToday() {
 }
 
 function goToTripScheduleSettings() {
-    setTab('itinerary');
+    setTab('tools');
     tripScheduleExpanded = true;
     syncTripScheduleChrome();
     setTimeout(() => {
@@ -667,13 +667,9 @@ function syncTripScheduleChrome() {
     const summaryText = document.getElementById('trip-schedule-summary-text');
     const bar = document.getElementById('trip-schedule-bar');
     const chevron = document.getElementById('trip-schedule-summary-chevron');
-    const planningHidden = isEdit && !travelMode;
-    const showBar = tripScheduleExpanded && !planningHidden;
+    const showBar = tripScheduleExpanded;
     if (summaryText) summaryText.textContent = getTripScheduleSummaryText();
-    if (summary) {
-        summary.classList.toggle('hidden', planningHidden);
-        summary.setAttribute('aria-expanded', showBar ? 'true' : 'false');
-    }
+    if (summary) summary.setAttribute('aria-expanded', showBar ? 'true' : 'false');
     if (bar) bar.classList.toggle('hidden', !showBar);
     if (chevron) chevron.className = showBar ? 'fas fa-chevron-up text-muted text-xs shrink-0' : 'fas fa-chevron-down text-muted text-xs shrink-0';
 }
@@ -1665,15 +1661,18 @@ function syncEditChrome() {
     const travelLabel = document.getElementById('travel-mode-btn-label');
     const templates = document.getElementById('check-templates');
 
+    const onToday = !document.getElementById('content-today').classList.contains('hidden');
+    const onItinerary = !document.getElementById('content-itinerary').classList.contains('hidden');
+
     if (travelBtn) {
         travelBtn.classList.toggle('header-mode-btn-active', travelMode);
         travelBtn.setAttribute('aria-pressed', travelMode ? 'true' : 'false');
         travelBtn.setAttribute('aria-label', travelMode ? '關閉出門模式' : '開啟出門模式');
         if (travelLabel) travelLabel.textContent = travelMode ? '出門中' : '出門';
+        travelBtn.classList.toggle('hidden', onToday);
     }
 
     if (editBtn) {
-        const onItinerary = !document.getElementById('content-itinerary').classList.contains('hidden');
         if (travelMode || !onItinerary) {
             editBtn.classList.add('hidden');
         } else {
@@ -1692,8 +1691,11 @@ function syncEditChrome() {
     });
     if (templates) templates.classList.toggle('hidden', !isEdit || travelMode);
     const planningEdit = isEdit && !travelMode;
-    document.getElementById('day-banner')?.classList.toggle('day-banner-compact', travelMode || planningEdit);
+    const showBanner = planningEdit;
+    document.getElementById('day-banner')?.classList.toggle('day-banner-hidden', !showBanner);
+    document.getElementById('day-banner')?.classList.toggle('day-banner-compact', showBanner);
     document.getElementById('main-day-card')?.classList.toggle('main-day-card-edit', planningEdit);
+    document.getElementById('main-day-card')?.classList.toggle('main-day-card-browse', !planningEdit);
     document.getElementById('itinerary-edit-banner')?.classList.toggle('hidden', !planningEdit);
     document.getElementById('itinerary-sticky-bar')?.classList.toggle('hidden', planningEdit);
     document.getElementById('search-toggle-btn')?.classList.toggle('hidden', planningEdit);
@@ -1701,7 +1703,6 @@ function syncEditChrome() {
     const daySel = document.getElementById('day-selector');
     const showPills = planningEdit;
     daySel?.classList.toggle('hidden', !showPills);
-    document.getElementById('pill-hint')?.classList.toggle('hidden', !showPills);
     syncTripScheduleChrome();
     syncTravelLayout();
 }
@@ -2770,7 +2771,7 @@ async function setTab(t) {
         void activePanel.offsetWidth;
         activePanel.classList.add('tab-panel-enter');
     }
-    const navBase = 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem]';
+    const navBase = 'flex-1 py-3 flex flex-col items-center gap-0.5 rounded-[2rem]';
     document.getElementById('nav-itinerary').className = `${navBase} ${t === 'itinerary' ? 'nav-tab-active' : 'text-muted'}`;
     document.getElementById('nav-tools').className = `${navBase} ${t === 'tools' ? 'nav-tab-active' : 'text-muted'}`;
     document.getElementById('nav-today').className = `${navBase} ${t === 'today' ? 'nav-tab-active' : 'text-muted'}`;

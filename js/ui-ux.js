@@ -1,5 +1,21 @@
 /* UI/UX 增強 — 出門儀表板、版面、手勢、地圖、Modal focus */
 
+let dashboardRestExpanded = false;
+
+function syncDashboardTravelToggle() {
+    const btn = document.getElementById('dashboard-travel-toggle');
+    const state = document.getElementById('dashboard-travel-state');
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', travelMode ? 'true' : 'false');
+    btn.setAttribute('aria-label', travelMode ? '關閉出門模式' : '開啟出門模式');
+    if (state) state.textContent = travelMode ? '開' : '關';
+}
+
+function toggleDashboardRestList() {
+    dashboardRestExpanded = !dashboardRestExpanded;
+    renderTravelDashboard();
+}
+
 function syncTravelLayout() {
     document.body.classList.toggle('travel-mode-on', travelMode);
     document.body.classList.toggle('edit-mode-on', isEdit && !travelMode);
@@ -8,6 +24,8 @@ function syncTravelLayout() {
     if (travelMode && searchPanelOpen) toggleSearchPanel();
     if (searchPanel && travelMode) searchPanel.classList.add('hidden');
 
+    if (!travelMode) dashboardRestExpanded = false;
+    syncDashboardTravelToggle();
     renderTravelDashboard();
     syncToolsLayout();
 }
@@ -403,9 +421,14 @@ function syncDashboardProgress(events) {
     el.classList.remove('hidden');
 }
 
-function renderTodayQuickTools() {
+function renderTodayQuickTools(hideForHero = false) {
     const el = document.getElementById('dashboard-quick-bar');
     if (!el || !isTodayTabActive()) return;
+    if (hideForHero) {
+        el.classList.add('hidden');
+        el.innerHTML = '';
+        return;
+    }
     let pinnedChip = '';
     const pinIdx = trip.pinnedDocIdx;
     if (pinIdx != null && trip.docs[pinIdx]) {
@@ -514,11 +537,12 @@ function renderTravelDashboard() {
 
     syncDashboardProgress(day.events);
     renderDashboardWeather(todayIdx);
-    renderTodayQuickTools();
     const dayLabel = formatBannerDayLabel(trip, day, todayIdx);
     const next = getDashboardNextEvent(todayIdx);
     const entries = sortEventEntries(day.events.map((ev, i) => ({ ev, i })));
     const liveToday = hasRealToday() && todayIdx === getTodayDayIndex();
+    const hasUpcomingHero = next.type === 'upcoming';
+    renderTodayQuickTools(hasUpcomingHero);
 
     if (hero) {
         if (next.type === 'empty') {
@@ -576,20 +600,13 @@ function renderTravelDashboard() {
            </div>`
         : '';
 
-    if (entries.length === 0) {
-        list.classList.remove('hidden');
-        list.innerHTML = `${setupBanner}<p class="dashboard-divider-label">今日未有景點安排</p>`;
-    } else {
-        list.classList.remove('hidden');
-        list.innerHTML = `${setupBanner}<p class="dashboard-divider-label">全日行程</p>${entries
-            .map(({ ev, i }) => {
-                const isNext = next.type === 'upcoming' && i === next.i;
-                const statusBadge = renderStatusBadgeHtml(ev.status, {
-                    interactive: true,
-                    dayIdx: todayIdx,
-                    eventIdx: i,
-                });
-                return `
+    const renderEventRow = ({ ev, i }, isNext) => {
+        const statusBadge = renderStatusBadgeHtml(ev.status, {
+            interactive: true,
+            dayIdx: todayIdx,
+            eventIdx: i,
+        });
+        return `
             <div class="today-event-row today-event-row-secondary w-full${isNext ? ' is-next-highlight' : ''}">
                 <button type="button" class="today-event-row-main" onclick="jumpToEvent(${todayIdx}, ${i})">
                     <span class="time-badge">${escapeHtml(ev.time || '--')}</span>
@@ -599,7 +616,27 @@ function renderTravelDashboard() {
                 </button>
                 <span class="today-event-row-status shrink-0">${statusBadge}</span>
             </div>`;
-            })
+    };
+
+    if (entries.length === 0) {
+        list.classList.remove('hidden');
+        list.innerHTML = `${setupBanner}<p class="dashboard-divider-label">今日未有景點安排</p>`;
+    } else if (hasUpcomingHero) {
+        const restEntries = entries.filter(({ i }) => i !== next.i);
+        list.classList.remove('hidden');
+        if (restEntries.length === 0) {
+            list.innerHTML = '';
+        } else if (!dashboardRestExpanded) {
+            list.innerHTML = `<button type="button" class="dashboard-rest-toggle" onclick="toggleDashboardRestList()" aria-expanded="false">其餘 ${restEntries.length} 個景點</button>`;
+        } else {
+            list.innerHTML = `${setupBanner}<button type="button" class="dashboard-rest-toggle" onclick="toggleDashboardRestList()" aria-expanded="true">收起列表</button>${restEntries
+                .map((entry) => renderEventRow(entry, false))
+                .join('')}`;
+        }
+    } else {
+        list.classList.remove('hidden');
+        list.innerHTML = `${setupBanner}<p class="dashboard-divider-label">全日行程</p>${entries
+            .map((entry) => renderEventRow(entry, next.type === 'upcoming' && entry.i === next.i))
             .join('')}`;
     }
 
@@ -723,3 +760,5 @@ window.refreshEventEditSheetIfOpen = refreshEventEditSheetIfOpen;
 window.renderTodayQuickTools = renderTodayQuickTools;
 window.syncDashboardDayTitle = syncDashboardDayTitle;
 window.stopDashboardCountdownTimer = stopDashboardCountdownTimer;
+window.toggleDashboardRestList = toggleDashboardRestList;
+window.syncDashboardTravelToggle = syncDashboardTravelToggle;
