@@ -2,407 +2,398 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#FF85A1">
+    <meta name="description" content="離線也能查看的旅行行程規劃工具">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="旅行筆記">
     <title>專屬你的旅行筆記</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
-        :root { --cute-pink: #FF85A1; --jp-ink: #2D3436; --soft-bg: #FFF9F9; }
-        body { font-family: 'Noto Sans JP', sans-serif; background-color: var(--soft-bg); color: var(--jp-ink); -webkit-tap-highlight-color: transparent; }
-        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .day-card.active { background: var(--cute-pink); color: white; transform: scale(1.1); box-shadow: 0 10px 20px rgba(255,133,161,0.3); }
-        .timeline-line { position: absolute; left: 24px; top: 0; bottom: 0; width: 4px; background: #FFE4E9; z-index: 0; }
-        .timeline-dot { position: absolute; left: 18px; width: 16px; height: 16px; border-radius: 50%; background: var(--cute-pink); border: 4px solid white; z-index: 10; margin-top: 4px; }
-        #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10001; justify-content: center; align-items: center; }
-        .remark-text { white-space: pre-wrap; word-break: break-word; }
-        #weather-loading { display: none; font-size: 8px; color: #FF85A1; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    </style>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="vendor/tailwind.css">
+    <link rel="stylesheet" href="vendor/fonts/noto-sans-tc.css">
+    <link rel="stylesheet" href="vendor/fontawesome/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="pb-36">
+<body>
+
+    <div id="status-banner-stack" class="status-banner-stack hidden" role="status" aria-live="polite"></div>
 
     <input type="file" id="banner-img-input" class="hidden" accept="image/*">
     <input type="file" id="event-img-input" class="hidden" accept="image/*">
-    <input type="file" id="lib-file-input" class="hidden" accept="image/*">
-
-    <div id="lightbox" onclick="this.style.display='none'">
-        <img id="lightbox-img" class="max-w-[90%] max-h-[80vh] rounded-2xl border-4 border-white shadow-2xl">
+    <input type="file" id="lib-file-input" class="hidden" accept="image/*,application/pdf,.pdf">
+    <div id="lightbox" role="dialog" aria-label="圖片預覽">
+        <button type="button" id="lightbox-close" onclick="closeLightbox()" aria-label="關閉"><i class="fas fa-times"></i></button>
+        <div id="lightbox-viewport">
+            <img id="lightbox-img" alt="預覽">
+        </div>
+        <p id="lightbox-hint">雙指縮放 · 滾輪放大 · Esc 關閉</p>
     </div>
 
+    <div id="toast" role="status"></div>
+
     <!-- Header -->
-    <header class="sticky top-0 z-50 glass border-b border-pink-50 px-6 py-4 flex justify-between items-center">
-        <div class="flex items-center gap-3 overflow-hidden">
-            <div class="flex-shrink-0 w-10 h-10 bg-[var(--cute-pink)] rounded-2xl flex items-center justify-center text-white shadow-lg">
+    <header class="sticky top-0 z-50 glass border-b border-default px-4 py-3 flex justify-between items-center relative">
+        <div class="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
+            <button type="button" id="header-menu-btn" onclick="toggleHeaderMenu()" class="flex-shrink-0 w-11 h-11 bg-[var(--cute-pink)] rounded-2xl flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform" aria-label="旅程選單" aria-expanded="false" aria-controls="header-menu">
                 <i class="fas fa-plane-departure"></i>
-            </div>
-            <div class="flex flex-col">
-                <div class="flex items-center gap-1">
-                    <select id="trip-selector" onchange="switchTrip(this.value)" class="text-sm font-black text-gray-800 bg-pink-50 px-2 py-1 outline-none max-w-[100px] border-none rounded-lg">
-                    </select>
-                    <button onclick="editTripName()" class="text-gray-400 text-xs p-1 hover:text-pink-400"><i class="fas fa-pen"></i></button>
-                    <button onclick="createNewTrip()" class="text-pink-400 text-sm p-1"><i class="fas fa-plus-circle"></i></button>
-                    <button id="del-trip-btn" onclick="deleteCurrentTrip()" class="hidden text-red-300 text-[10px] ml-1 p-1 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
-                </div>
-                <p class="text-[8px] font-bold text-pink-300 uppercase tracking-widest">Plan Your Trip!</p>
+            </button>
+            <div class="flex flex-col min-w-0 flex-1">
+                <h1 id="trip-title" class="truncate">我的旅行</h1>
+                <p id="header-subtitle" class="truncate">開始規劃！</p>
             </div>
         </div>
-        <button id="edit-btn" onclick="toggleEdit()" class="px-5 py-2 bg-[var(--jp-ink)] text-white rounded-2xl font-black text-[11px] shadow-lg active:scale-90 transition-all">編輯</button>
+        <div id="header-actions" class="header-actions shrink-0 ml-2">
+            <button type="button" id="travel-mode-btn" onclick="toggleTravelMode()" class="header-mode-btn header-icon-btn" aria-pressed="false" aria-label="出門模式">
+                <i class="fas fa-suitcase-rolling" aria-hidden="true"></i>
+                <span id="travel-mode-btn-label" class="sr-only">出門</span>
+            </button>
+            <button type="button" id="edit-btn" onclick="toggleEdit()" class="header-mode-btn header-icon-btn hidden" aria-label="編輯行程"><i class="fas fa-pen" aria-hidden="true"></i></button>
+        </div>
+        <div id="header-menu" class="hidden" role="menu">
+            <p class="type-micro text-muted mb-2 px-0.5">我的旅程</p>
+            <div id="trip-picker" class="trip-picker" role="listbox" aria-label="選擇旅程"></div>
+            <div class="header-menu-actions">
+                <button type="button" onclick="editTripName(); closeHeaderMenu();" class="bg-pink-50 text-pink-600">改名</button>
+                <button type="button" onclick="createNewTrip(); closeHeaderMenu();" class="bg-pink-50 text-pink-600">新旅程</button>
+                <button type="button" id="del-trip-menu-btn" onclick="deleteCurrentTrip(); closeHeaderMenu();" class="hidden bg-red-50 text-red-500">刪除</button>
+            </div>
+        </div>
     </header>
 
-    <main class="max-w-md mx-auto p-4 space-y-6">
-        <section id="content-itinerary" class="space-y-6">
-            <!-- Widgets -->
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-4 rounded-[2rem] shadow-sm flex items-center gap-3 border border-pink-50 min-h-[80px]">
-                    <div id="weather-icon" class="text-2xl text-orange-300"><i class="fas fa-sun"></i></div>
-                    <div class="overflow-hidden">
-                        <div class="flex items-center gap-1">
-                            <p id="weather-display" class="text-xs font-black text-gray-700">--°C</p>
-                            <span id="weather-loading">●</span>
-                        </div>
-                        <div id="city-area"></div>
-                    </div>
+    <main class="max-w-md mx-auto p-4 space-y-4">
+        <section id="content-itinerary" class="space-y-3 flex flex-col tab-panel">
+            <button type="button" id="trip-schedule-summary" class="trip-schedule-summary w-full" onclick="toggleTripSchedule()" aria-expanded="false" aria-controls="trip-schedule-bar">
+                <span id="trip-schedule-summary-text" class="type-caption font-bold text-primary truncate">規劃設定</span>
+                <i id="trip-schedule-summary-chevron" class="fas fa-chevron-down text-muted text-xs shrink-0" aria-hidden="true"></i>
+            </button>
+
+            <div id="trip-schedule-bar" class="hidden bg-surface p-4 rounded-[1.5rem] border border-default shadow-sm space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="type-caption text-secondary font-bold shrink-0">出發日期</span>
+                    <input type="date" id="start-date-input" onchange="onStartDateChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary flex-1 min-w-[140px] border border-default min-h-[2.5rem]">
+                    <span class="type-caption text-secondary font-bold shrink-0">行程</span>
+                    <input type="number" id="trip-days-input" min="1" max="30" onchange="onTripDaysChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary w-16 border border-default min-h-[2.5rem] text-center" inputmode="numeric">
+                    <span class="type-caption text-secondary font-bold shrink-0">天</span>
                 </div>
-                <div class="bg-white p-4 rounded-[2rem] shadow-sm border border-pink-50">
-                    <div class="flex items-center gap-1">
-                        <input type="number" id="curr-local" oninput="convert('local')" placeholder="外幣" class="w-full bg-gray-50 rounded-xl p-1.5 text-[10px] font-black outline-none">
-                        <i class="fas fa-arrows-left-right text-[8px] text-pink-200"></i>
-                        <input type="number" id="curr-home" oninput="convert('home')" placeholder="HKD" class="w-full bg-pink-50 rounded-xl p-1.5 text-[10px] font-black outline-none">
-                    </div>
-                    <div class="mt-1 text-center">
-                        <span class="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Rate: </span>
-                        <input type="number" id="rate-input" oninput="updateRate(this.value)" step="0.001" class="text-[10px] w-12 bg-transparent text-pink-400 font-black border-b border-gray-100 outline-none">
-                    </div>
-                </div>
+                <p id="pill-hint" class="type-micro text-muted">設定出發日期後，pill 會顯示月日同每日景點預估</p>
             </div>
 
-            <!-- Day Selector -->
-            <div class="flex gap-4 overflow-x-auto no-scrollbar py-2 px-1" id="day-selector"></div>
+            <div class="day-nav-bar">
+                <button type="button" id="day-nav-prev" class="day-nav-btn" onclick="dayNavPrev()" aria-label="上一日"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                <p id="day-nav-label" class="day-nav-label type-caption font-bold text-primary">第 1 日</p>
+                <button type="button" id="day-nav-next" class="day-nav-btn" onclick="dayNavNext()" aria-label="下一日"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                <button type="button" id="search-toggle-btn" class="day-nav-btn day-nav-search" onclick="toggleSearchPanel()" aria-label="搜尋行程" aria-expanded="false" aria-controls="search-panel">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                </button>
+            </div>
 
-            <!-- Main Card -->
-            <div class="bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-white relative">
-                <div id="day-banner" class="h-60 relative bg-gray-200 group">
-                    <img id="day-img" src="" class="w-full h-full object-cover">
+            <div id="search-panel" class="hidden space-y-2">
+                <div id="search-wrap" class="relative">
+                    <label class="sr-only" for="search-input">搜尋全旅程景點與備註</label>
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-muted text-sm pointer-events-none" aria-hidden="true"></i>
+                    <input type="search" id="search-input" oninput="onSearchInput(this.value)" placeholder="搜尋景點、備註、訂位編號…" class="w-full pl-11 pr-10 py-3 min-h-[2.75rem] rounded-2xl border border-default bg-surface type-body font-bold outline-none focus:ring-2 focus:ring-[var(--border-soft)]">
+                    <button type="button" id="search-clear" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-muted text-base p-2 min-w-[2.75rem] min-h-[2.75rem]" aria-label="清除搜尋"><i class="fas fa-times-circle"></i></button>
+                </div>
+                <div id="search-results" class="hidden bg-surface rounded-2xl border border-default overflow-hidden"></div>
+            </div>
+
+            <div class="flex overflow-x-auto no-scrollbar px-1" id="day-selector"></div>
+
+            <div id="main-day-card" class="bg-white rounded-[1.5rem] overflow-hidden relative">
+                <div id="day-banner" class="day-banner relative bg-gray-200 group">
+                    <img id="day-img" src="" alt="" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                    <button id="btn-upload-banner" onclick="triggerFile('banner-img-input')" class="hidden absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl text-white flex items-center justify-center border border-white/30"><i class="fas fa-camera"></i></button>
-                    
-                    <div class="absolute bottom-6 left-8 right-8 flex justify-between items-end text-white">
-                        <div class="flex-1 pr-4">
-                            <span id="day-label" class="px-2 py-1 bg-[var(--cute-pink)] rounded-lg text-[9px] font-black mb-2 inline-block shadow-md uppercase tracking-tighter">Day Info</span>
-                            <div id="day-title-box"></div>
-                        </div>
-                        <div class="text-right flex-shrink-0">
-                            <p class="text-[9px] font-bold opacity-70 uppercase mb-1">今日預算</p>
-                            <div id="day-budget-box" class="text-2xl font-black italic tracking-tighter"></div>
-                        </div>
+                    <div class="hidden absolute top-4 right-4 flex gap-2" id="day-banner-actions">
+                        <button type="button" onclick="copyCurrentDay()" class="btn-banner-action" title="複製整天行程" aria-label="複製整天行程"><i class="fas fa-copy"></i><span>複製</span></button>
+                        <button type="button" id="btn-upload-banner" onclick="triggerFile('banner-img-input')" class="btn-banner-action" title="更換當日封面" aria-label="更換當日封面"><i class="fas fa-camera"></i><span>封面</span></button>
+                    </div>
+
+                    <div class="day-banner-footer absolute bottom-4 left-5 right-5 text-white">
+                        <span id="day-label" class="day-banner-chip mb-2 inline-block">Day Info</span>
+                        <div id="day-title-box"></div>
                     </div>
                 </div>
 
-                <div class="p-8 pt-10 relative">
-                    <div id="timeline" class="space-y-10 relative min-h-[50px]"></div>
-                    <div id="edit-controls" class="hidden mt-10 space-y-2">
-                        <button onclick="addEvent()" class="w-full py-5 border-2 border-dashed border-pink-100 rounded-[2rem] text-pink-400 font-bold text-xs hover:bg-pink-50">+ 新增景點</button>
-                        <button onclick="addDay()" class="w-full py-3 border border-gray-200 rounded-[1.5rem] text-gray-400 font-bold text-[10px]">+ 新增一天</button>
+                <div class="day-card-body relative">
+                    <div id="day-title-display-panel" class="day-heading-display hidden">
+                        <p id="day-title-display-text" class="day-heading-text"></p>
+                    </div>
+                    <div id="day-title-edit-panel" class="day-heading-edit hidden">
+                        <label for="day-title-input" class="sr-only">當日標題</label>
+                        <input type="text" id="day-title-input" placeholder="當日標題，例：上野 · 秋葉原" class="day-heading-input" aria-label="當日標題">
+                    </div>
+                    <div id="timeline" class="space-y-5 relative min-h-[50px]"></div>
+                    <div id="edit-controls" class="hidden mt-6 space-y-2">
+                        <button type="button" onclick="addEvent()" class="w-full py-4 border-2 border-dashed border-pink-100 rounded-[1.5rem] text-pink-400 type-caption font-heavy hover:bg-pink-50">+ 新增景點</button>
+                        <button type="button" onclick="addDay()" class="w-full py-3 border border-gray-200 rounded-[1.5rem] text-gray-400 type-micro font-heavy">+ 新增一天</button>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Tools Tab -->
-        <section id="content-tools" class="hidden space-y-6 pb-10">
-            <div class="bg-[var(--jp-ink)] p-8 rounded-[3rem] text-white shadow-xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-sm font-black uppercase tracking-widest">重要文件</h2>
-                    <button id="btn-upload-doc" onclick="triggerFile('lib-file-input')" class="hidden px-4 py-2 bg-[var(--cute-pink)] rounded-xl text-[10px] font-black">上傳檔案</button>
+        <section id="content-tools" class="hidden space-y-4 pb-10 tab-panel">
+            <p id="tools-group-travel" class="tools-group-heading">出門必備</p>
+
+            <div class="tools-travel-grid">
+            <div id="tools-weather-card" class="tools-widget-compact bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm space-y-3">
+                <h2 class="type-caption font-heavy text-primary">天氣</h2>
+                <div id="weather-widget" class="w-full bg-surface-muted p-3 rounded-2xl border border-default">
+                    <div class="weather-widget-controls">
+                        <label class="weather-day-field">
+                            <span class="type-micro text-muted font-heavy">日期</span>
+                            <select id="weather-day-select" onchange="onWeatherDaySelect(parseInt(this.value,10))" class="weather-day-select" aria-label="選擇日期"></select>
+                        </label>
+                        <label class="weather-day-field">
+                            <span class="type-micro text-muted font-heavy">地點</span>
+                            <select id="weather-location-select" onchange="onWeatherLocationSelect(this.value)" class="weather-day-select" aria-label="選擇地點"></select>
+                        </label>
+                    </div>
+                    <div class="weather-widget-body">
+                        <div id="weather-icon" class="text-xl text-warning shrink-0" aria-hidden="true"><i class="fas fa-sun"></i></div>
+                        <div class="overflow-hidden min-w-0 flex-1">
+                            <p id="weather-display" class="type-caption text-primary font-heavy">--°C</p>
+                            <p id="weather-detail" class="hidden type-micro text-muted truncate"></p>
+                        </div>
+                        <span id="weather-loading" aria-hidden="true">●</span>
+                        <button type="button" onclick="refreshWeather(true)" class="rate-refresh-btn" aria-label="刷新天氣"><i class="fas fa-rotate-right text-secondary type-micro" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <p id="weather-coverage-hint" class="type-micro text-muted text-center leading-relaxed"></p>
+            </div>
+
+            <div id="tools-rate-card" class="tools-widget-compact bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm space-y-3">
+                <h2 class="type-caption font-heavy text-primary">匯率</h2>
+                <div id="rate-widget" class="w-full bg-surface-muted p-3 rounded-2xl border border-default">
+                    <div class="rate-currency-row">
+                        <label class="rate-currency-field">
+                            <span class="type-micro text-muted font-bold">目的地</span>
+                            <select id="local-currency-select" onchange="onLocalCurrencySelect(this.value)" class="rate-currency-select" aria-label="目的地貨幣"></select>
+                        </label>
+                        <button type="button" onclick="swapCurrencies()" class="rate-swap-btn" aria-label="對調貨幣"><i class="fas fa-right-left" aria-hidden="true"></i></button>
+                        <label class="rate-currency-field">
+                            <span class="type-micro text-muted font-bold">本國</span>
+                            <select id="home-currency-select" onchange="onHomeCurrencySelect(this.value)" class="rate-currency-select" aria-label="本國貨幣"></select>
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-1 mt-2">
+                        <input type="number" id="curr-local" oninput="convert('local')" placeholder="JPY" class="w-full bg-surface rounded-xl p-2 type-caption font-bold outline-none min-h-[2.25rem] border border-default" inputmode="decimal">
+                        <i class="fas fa-arrows-left-right type-micro text-muted shrink-0" aria-hidden="true"></i>
+                        <input type="number" id="curr-home" oninput="convert('home')" placeholder="HKD" class="w-full bg-surface rounded-xl p-2 type-caption font-bold outline-none min-h-[2.25rem] border border-default" inputmode="decimal">
+                    </div>
+                    <div class="rate-line-row mt-1">
+                        <p id="rate-line" class="type-micro text-secondary font-bold flex-1 text-center min-w-0 truncate">1 JPY = -- HKD</p>
+                        <span id="rate-loading" aria-hidden="true">●</span>
+                        <button type="button" onclick="refreshRate(true)" class="rate-refresh-btn" aria-label="刷新匯率"><i class="fas fa-rotate-right text-secondary type-micro" aria-hidden="true"></i></button>
+                    </div>
+                    <p id="rate-detail" class="hidden type-micro text-muted text-center truncate mt-0.5"></p>
+                </div>
+            </div>
+            </div>
+
+            <div id="tools-docs-card" class="bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="type-body font-heavy text-primary">重要文件</h2>
+                    <button type="button" id="btn-upload-doc" onclick="triggerFile('lib-file-input')" class="hidden btn-primary-sm chip-label px-3 py-2">上傳</button>
                 </div>
                 <div id="doc-list" class="grid grid-cols-2 gap-4"></div>
             </div>
-            <div class="bg-white p-8 rounded-[3rem] border border-pink-50 shadow-lg">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-sm font-black text-gray-800">行李清單</h2>
-                    <button id="btn-add-check" onclick="addCheck()" class="hidden px-4 py-1.5 bg-pink-50 text-pink-500 rounded-xl text-[10px] font-bold">+ 新增</button>
+
+            <div id="tools-checklist-card" class="bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="type-body font-heavy text-primary">行李清單</h2>
+                    <button type="button" id="btn-add-check" onclick="addCheck()" class="hidden type-micro font-heavy text-pink-500 px-3 py-1.5 bg-pink-50 rounded-xl">+ 新增</button>
+                </div>
+                <div id="check-progress-wrap" class="hidden mb-4">
+                    <div class="flex justify-between type-micro font-heavy text-secondary mb-1">
+                        <span id="check-progress-text"></span>
+                    </div>
+                    <div class="progress-track"><div id="check-progress-fill" class="progress-fill" style="width:0%"></div></div>
+                </div>
+                <div id="check-templates" class="hidden flex flex-wrap gap-2 mb-4">
+                    <button type="button" onclick="applyCheckTemplate('short')" class="chip-label px-3 py-1.5 bg-pink-50 text-pink-600 rounded-xl">輕旅行</button>
+                    <button type="button" onclick="applyCheckTemplate('winter')" class="chip-label px-3 py-1.5 bg-pink-50 text-pink-600 rounded-xl">冬季</button>
+                    <button type="button" onclick="applyCheckTemplate('business')" class="chip-label px-3 py-1.5 bg-pink-50 text-pink-600 rounded-xl">出差</button>
                 </div>
                 <div id="check-list" class="space-y-3"></div>
             </div>
-            <button onclick="resetAll()" class="w-full text-[8px] text-gray-200 py-10 uppercase font-bold tracking-widest">重設所有數據</button>
+
+            <p id="tools-group-backup" class="tools-group-heading mt-2">備份與分享</p>
+
+            <div id="tools-share-card" class="bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm space-y-3">
+                <h2 class="type-body font-heavy text-primary">分享與列印</h2>
+                <div class="flex gap-2">
+                    <button type="button" onclick="shareCurrentTrip()" class="flex-1 btn-primary-sm py-3"><i class="fas fa-share-alt mr-1"></i>分享全程</button>
+                    <button type="button" onclick="printCurrentTrip()" class="flex-1 btn-ghost-sm py-3"><i class="fas fa-print mr-1"></i>列印／PDF</button>
+                </div>
+            </div>
+
+            <button type="button" id="tools-settings-toggle" class="tools-settings-toggle mt-2" onclick="toggleToolsSettings()" aria-expanded="false" aria-controls="tools-settings-panel">
+                <span>設定與進階</span>
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+
+            <div id="tools-settings-panel" class="tools-settings-panel hidden">
+            <div id="tools-appearance-card" class="bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm">
+                <label class="setting-row">
+                    <span class="type-body font-heavy text-primary">深色模式</span>
+                    <button type="button" id="theme-toggle-btn" onclick="toggleDarkMode()" class="setting-theme-btn" aria-pressed="false" aria-label="切換深色模式">
+                        <i id="theme-toggle-icon" class="fas fa-moon" aria-hidden="true"></i>
+                    </button>
+                </label>
+            </div>
+
+            <div id="tools-reminders-card" class="bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm space-y-3">
+                <h2 class="type-body font-bold text-primary">出發提醒</h2>
+                <label class="setting-row">
+                    <span class="type-body font-bold text-primary">開啟提醒</span>
+                    <span class="setting-toggle">
+                        <input type="checkbox" id="reminder-enabled" onchange="onReminderSettingsChange()" class="setting-toggle-input">
+                        <span class="setting-toggle-track" aria-hidden="true"></span>
+                    </span>
+                </label>
+                <label class="setting-row">
+                    <span class="type-caption text-secondary">出發前／當日</span>
+                    <span class="setting-toggle">
+                        <input type="checkbox" id="reminder-departure" onchange="onReminderSettingsChange()" class="setting-toggle-input">
+                        <span class="setting-toggle-track" aria-hidden="true"></span>
+                    </span>
+                </label>
+                <div class="flex items-center gap-2 type-caption">
+                    <span class="font-bold text-gray-600 shrink-0">每日</span>
+                    <select id="reminder-hour" onchange="onReminderSettingsChange()" class="bg-pink-50 rounded-xl px-3 py-2 outline-none font-bold text-pink-600 min-h-[2.75rem]">
+                        <option value="7">7:00</option>
+                        <option value="8" selected>8:00</option>
+                        <option value="9">9:00</option>
+                        <option value="10">10:00</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="storage-warning" class="hidden bg-red-50 p-4 rounded-2xl border border-red-200 type-caption font-bold text-red-600 leading-relaxed"></div>
+            <p id="storage-info" class="type-micro text-muted font-bold text-center"></p>
+
+            <div class="bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm space-y-3">
+                <h2 class="type-body font-bold text-primary">離線與安裝</h2>
+                <p class="type-caption text-gray-500">曾連線開啟一次後可離線用。Safari／Chrome 選「加入主畫面」。</p>
+                <p id="pwa-install-hint" class="hidden type-caption text-pink-500 font-bold">可安裝 App 或加入主畫面</p>
+            </div>
+
+            <div class="tools-advanced-bar">
+                <button type="button" id="tools-advanced-btn" onclick="toggleToolsAdvancedMenu()" class="tools-settings-toggle w-full" aria-label="進階選項" aria-expanded="false" aria-controls="tools-advanced-menu">
+                    <span>進階選項</span>
+                    <i class="fas fa-ellipsis" aria-hidden="true"></i>
+                </button>
+            </div>
+            </div>
+        </section>
+
+        <!-- Today Tab -->
+        <section id="content-today" class="hidden space-y-4 pb-10 tab-panel">
+            <div id="travel-dashboard" class="bg-surface rounded-[1.5rem] border border-default shadow-sm dashboard-card">
+                <div class="dashboard-top">
+                    <h2 id="dashboard-title" class="dashboard-section-label"><i class="fas fa-calendar-day text-accent mr-1"></i>今日總覽</h2>
+                    <p id="dashboard-hint" class="hidden dashboard-hint"></p>
+                    <p id="dashboard-day-title" class="dashboard-day-heading hidden"></p>
+                </div>
+                <div class="dashboard-meta-row">
+                    <div id="dashboard-weather" class="hidden" aria-live="polite"></div>
+                    <div class="dashboard-meta-actions">
+                        <div id="dashboard-progress" class="dashboard-progress hidden" aria-label="今日進度"></div>
+                        <button type="button" id="dashboard-jump-btn" onclick="goToToday()" class="dashboard-jump-link" aria-label="查看行程" title="查看行程">
+                            <i class="fas fa-map-marked-alt" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="dashboard-hero" class="hidden"></div>
+                <div id="dashboard-quick-bar" class="dashboard-quick-bar hidden"></div>
+                <div id="today-overview-list" class="dashboard-day-list"></div>
+            </div>
         </section>
     </main>
 
+    <button type="button" id="fab-quick-add" onclick="quickAddEvent()" class="hidden fixed bottom-28 right-5 z-[95] w-14 h-14 rounded-full bg-[var(--cute-pink)] text-white shadow-2xl flex items-center justify-center text-xl active:scale-95 transition-transform" aria-label="快速新增景點">
+        <i class="fas fa-plus"></i>
+    </button>
+
     <!-- Navigation -->
-    <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass rounded-[2.5rem] border border-white shadow-2xl z-[100] flex p-2 gap-2">
-        <button onclick="setTab('itinerary')" id="nav-itinerary" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] bg-[var(--jp-ink)] text-white shadow-xl">
-            <i class="fas fa-map-marked-alt text-sm"></i>
-            <span class="text-[9px] font-black">行程規劃</span>
+    <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass rounded-[2.5rem] border border-default shadow-2xl z-[100] flex p-2 gap-2" aria-label="主選單">
+        <button type="button" onclick="setTab('today')" id="nav-today" class="nav-tab-active flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem]">
+            <i class="fas fa-calendar-day text-sm" aria-hidden="true"></i>
+            <span class="nav-tab-label">今日</span>
         </button>
-        <button onclick="setTab('tools')" id="nav-tools" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-gray-400">
-            <i class="fas fa-briefcase text-sm"></i>
-            <span class="text-[9px] font-black">工具清單</span>
+        <button type="button" onclick="setTab('itinerary')" id="nav-itinerary" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-muted">
+            <i class="fas fa-map-marked-alt text-sm" aria-hidden="true"></i>
+            <span class="nav-tab-label">行程</span>
+        </button>
+        <button type="button" onclick="setTab('tools')" id="nav-tools" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] text-muted">
+            <i class="fas fa-briefcase text-sm" aria-hidden="true"></i>
+            <span class="nav-tab-label">工具</span>
         </button>
     </nav>
 
-    <script>
-        const KEY = 'TRAVEL_V5_5_STORAGE';
-        let isEdit = false, curDayIdx = 0, curEventIdx = null;
+    <div id="tools-advanced-menu" class="hidden" role="dialog" aria-label="進階選項" onclick="if(event.target===this)closeToolsAdvancedMenu()">
+        <div class="sheet" onclick="event.stopPropagation()">
+            <p class="type-caption text-muted mb-3">進階選項</p>
+            <button type="button" onclick="closeToolsAdvancedMenu();loadDemoTrip()" class="btn-ghost-sm w-full py-3 mb-2"><i class="fas fa-bolt text-accent mr-1"></i>載入東京示範行程</button>
+            <button type="button" onclick="closeToolsAdvancedMenu();cleanupUnusedImages()" class="btn-ghost-sm w-full py-3 mb-2">清理未使用圖片</button>
+            <button type="button" onclick="closeToolsAdvancedMenu();resetAll()" class="btn-danger-solid w-full">重設所有數據</button>
+            <button type="button" class="type-caption text-muted mt-3 w-full min-h-[2.75rem]" onclick="closeToolsAdvancedMenu()">取消</button>
+        </div>
+    </div>
 
-        const defaultTrip = (name = "我的旅行", city = "Tokyo") => ({
-            name, city, rate: 0.052,
-            itinerary: [{ date: "Day 1", weekday: "一", title: "開啟旅程", img: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800", budget: 0, events: [] }],
-            checklist: [{ task: "檢查護照", done: false }],
-            docs: []
-        });
+    <div id="event-edit-picker" class="hidden" role="dialog" aria-label="編輯景點" onclick="if(event.target===this)closeEventEditSheet()">
+        <div class="sheet sheet-tall" onclick="event.stopPropagation()">
+            <p class="type-caption text-muted mb-1">編輯景點</p>
+            <p id="event-edit-picker-loc" class="type-body font-bold text-primary mb-3 truncate"></p>
+            <div id="event-edit-picker-body" class="event-edit-sheet-body"></div>
+            <button type="button" class="type-caption text-muted mt-3 w-full min-h-[2.75rem]" onclick="closeEventEditSheet()">完成</button>
+        </div>
+    </div>
 
-        let data = JSON.parse(localStorage.getItem(KEY)) || { activeIdx: 0, trips: [defaultTrip()] };
-        let trip = data.trips[data.activeIdx];
+    <div id="event-status-picker" class="hidden" role="dialog" aria-label="景點狀態" onclick="if(event.target===this)closeEventStatusPicker()">
+        <div class="sheet" onclick="event.stopPropagation()">
+            <p class="type-caption text-muted mb-1">景點狀態</p>
+            <p id="event-status-picker-loc" class="type-body font-bold text-primary mb-3 truncate"></p>
+            <div id="event-status-picker-options" class="status-picker-options"></div>
+            <button type="button" class="type-caption text-muted mt-2 w-full min-h-[2.75rem]" onclick="closeEventStatusPicker()">取消</button>
+        </div>
+    </div>
 
-        function save() { 
-            data.trips[data.activeIdx] = trip;
-            localStorage.setItem(KEY, JSON.stringify(data)); 
-        }
+    <div id="app-modal" class="hidden fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="absolute inset-0 bg-black/40" data-modal-dismiss></div>
+        <div class="relative w-full max-w-sm bg-white rounded-[2rem] p-6 shadow-2xl border border-pink-50">
+            <h3 id="modal-title" class="type-body font-heavy text-primary mb-2"></h3>
+            <p id="modal-message" class="hidden type-caption text-secondary mb-4 leading-relaxed"></p>
+            <input id="modal-input" type="text" class="hidden w-full bg-pink-50 rounded-xl px-3 py-2.5 type-body font-heavy outline-none focus:ring-2 focus:ring-pink-200 mb-4">
+            <div class="flex gap-2">
+                <button type="button" id="modal-cancel" class="flex-1 py-3 rounded-2xl type-caption font-heavy text-secondary bg-gray-50">取消</button>
+                <button type="button" id="modal-confirm" class="btn-inverse flex-1 py-3 rounded-2xl type-caption font-heavy">確定</button>
+            </div>
+        </div>
+    </div>
 
-        function init() {
-            renderTripSelector();
-            renderDaySelector();
-            renderDay(curDayIdx);
-            renderCityUI();
-            fetchWeather();
-        }
+    <div id="onboarding" class="onboarding" role="dialog" aria-modal="true" aria-label="新手引導" aria-hidden="true">
+        <div class="onboarding-card">
+            <div id="onboarding-dots" class="onboarding-dots"></div>
+            <div id="onboarding-body"></div>
+            <div class="onboarding-actions">
+                <button type="button" id="onboarding-back" class="btn-ghost-sm hidden" onclick="onboardingBack()">上一步</button>
+                <button type="button" class="btn-ghost-sm" onclick="skipOnboarding()">跳過</button>
+                <button type="button" id="onboarding-next" class="btn-primary-sm flex-1" onclick="onboardingNext()">下一步</button>
+            </div>
+        </div>
+    </div>
 
-        function renderTripSelector() {
-            const s = document.getElementById('trip-selector');
-            s.innerHTML = data.trips.map((t, i) => `<option value="${i}" ${i==data.activeIdx?'selected':''}>${t.name}</option>`).join('');
-            document.getElementById('rate-input').value = trip.rate;
-        }
-
-        function renderDaySelector() {
-            const container = document.getElementById('day-selector');
-            container.innerHTML = trip.itinerary.map((d, i) => `
-                <div class="relative flex-shrink-0 group">
-                    <button onclick="renderDay(${i})" class="day-card w-16 h-24 rounded-[1.8rem] bg-white border border-pink-50 flex flex-col items-center justify-center transition-all ${i===curDayIdx?'active':''}">
-                        ${isEdit ? 
-                            `<input oninput="trip.itinerary[${i}].date=this.value" value="${d.date}" class="w-12 bg-transparent text-center text-[9px] font-black outline-none border-b border-white/30 mb-1">
-                             <input oninput="trip.itinerary[${i}].weekday=this.value" value="${d.weekday}" class="w-10 bg-transparent text-center text-[10px] font-bold outline-none border-b border-white/50 text-white" placeholder="週幾">` 
-                            : `<span class="text-[9px] font-black">${d.date}</span><span class="text-[10px] font-bold opacity-30 mt-1">${d.weekday}</span>`
-                        }
-                    </button>
-                    ${isEdit && trip.itinerary.length > 1 ? `<button onclick="delDay(${i})" class="absolute -top-1 -right-1 bg-red-400 text-white w-5 h-5 rounded-full text-[8px] border-2 border-white shadow-sm"><i class="fas fa-times"></i></button>` : ''}
-                </div>
-            `).join('');
-        }
-
-        function renderCityUI() {
-            const area = document.getElementById('city-area');
-            if(isEdit) {
-                area.innerHTML = `<input id="city-in" oninput="trip.city=this.value" value="${trip.city}" class="text-[10px] font-black uppercase text-pink-500 bg-pink-100 w-full outline-none border-b-2 border-pink-400 p-1 rounded">`;
-            } else {
-                area.innerHTML = `<p class="text-[9px] text-orange-300 font-bold uppercase tracking-widest truncate">${trip.city}</p>`;
-            }
-        }
-
-        function switchTrip(idx) {
-            data.activeIdx = parseInt(idx);
-            trip = data.trips[data.activeIdx];
-            curDayIdx = 0;
-            save();
-            init();
-        }
-
-        function createNewTrip() {
-            const n = prompt("輸入旅程名稱：", "新旅程");
-            if(n) {
-                data.trips.push(defaultTrip(n));
-                switchTrip(data.trips.length - 1);
-            }
-        }
-
-        function editTripName() {
-            const newName = prompt("修改旅程名稱：", trip.name);
-            if (newName && newName.trim() !== "") {
-                trip.name = newName.trim();
-                save();
-                renderTripSelector();
-            }
-        }
-
-        function deleteCurrentTrip() {
-            if (data.trips.length <= 1) return alert("至少需要保留一個旅程！");
-            if (confirm(`確定要刪除「${trip.name}」嗎？`)) {
-                data.trips.splice(data.activeIdx, 1);
-                data.activeIdx = 0;
-                trip = data.trips[data.activeIdx];
-                curDayIdx = 0;
-                localStorage.setItem(KEY, JSON.stringify(data));
-                init();
-            }
-        }
-
-        function toggleEdit() {
-            isEdit = !isEdit;
-            const btn = document.getElementById('edit-btn');
-            btn.innerText = isEdit ? '完成' : '編輯';
-            btn.className = `px-5 py-2 text-white rounded-2xl font-black text-[11px] shadow-lg active:scale-90 transition-all ${isEdit?'bg-green-500':'bg-[var(--jp-ink)]'}`;
-            
-            document.getElementById('del-trip-btn').classList.toggle('hidden', !isEdit);
-            document.querySelectorAll('#edit-controls, #btn-upload-banner, #btn-upload-doc, #btn-add-check').forEach(el => el.classList.toggle('hidden', !isEdit));
-            
-            if(!isEdit) { save(); fetchWeather(); }
-            renderDaySelector();
-            renderDay(curDayIdx);
-            renderCityUI();
-            renderDocs();
-            renderCheck();
-        }
-
-        async function fetchWeather() {
-            const display = document.getElementById('weather-display');
-            const loader = document.getElementById('weather-loading');
-            if(!trip.city) return;
-            loader.style.display = 'inline';
-            try {
-                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip.city)}&count=1&language=en&format=json`);
-                const geoData = await geoRes.json();
-                if (geoData.results && geoData.results.length > 0) {
-                    const { latitude, longitude } = geoData.results[0];
-                    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
-                    const weatherData = await weatherRes.json();
-                    display.innerText = `${Math.round(weatherData.current_weather.temperature)}°C`;
-                    updateWeatherIcon(weatherData.current_weather.weathercode);
-                } else { display.innerText = "N/A"; }
-            } catch (err) { display.innerText = "ERR"; } finally { loader.style.display = 'none'; }
-        }
-
-        function updateWeatherIcon(code) {
-            const icon = document.getElementById('weather-icon');
-            if (code === 0) icon.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
-            else if (code <= 3) icon.innerHTML = '<i class="fas fa-cloud-sun text-gray-400"></i>';
-            else if (code <= 67) icon.innerHTML = '<i class="fas fa-cloud-showers-heavy text-blue-400"></i>';
-            else if (code <= 77) icon.innerHTML = '<i class="fas fa-snowflake text-blue-200"></i>';
-            else icon.innerHTML = '<i class="fas fa-bolt text-purple-400"></i>';
-        }
-
-        function toggleEventStatus(dayIdx, eventIdx) {
-            const ev = trip.itinerary[dayIdx].events[eventIdx];
-            ev.status = (ev.status === 'booked' ? 'pending' : 'booked');
-            save();
-            renderDay(dayIdx);
-        }
-
-        function renderDay(idx) {
-            curDayIdx = idx;
-            const day = trip.itinerary[idx];
-            document.getElementById('day-img').src = day.img;
-            document.getElementById('day-label').innerText = `${day.date} · ${day.weekday}`;
-            
-            const tBox = document.getElementById('day-title-box');
-            tBox.innerHTML = isEdit ? `<input oninput="trip.itinerary[${idx}].title=this.value" value="${day.title}" class="w-full bg-white/20 border-b-2 border-white outline-none text-xl font-bold">` : `<h2 class="text-2xl font-black drop-shadow-md text-white">${day.title}</h2>`;
-
-            const bBox = document.getElementById('day-budget-box');
-            bBox.innerHTML = isEdit ? `<input type="number" oninput="trip.itinerary[${idx}].budget=this.value" value="${day.budget}" class="w-20 bg-white/20 outline-none border-b-2 border-white text-right">` : `¥ ${day.budget}`;
-
-            const timeline = document.getElementById('timeline');
-            timeline.innerHTML = '<div class="timeline-line"></div>';
-            day.events.forEach((ev, i) => {
-                const statusClass = ev.status === 'booked' ? 'bg-green-50 text-green-500 border-green-200' : 'bg-orange-50 text-orange-500 border-orange-200';
-                const statusText = ev.status === 'booked' ? '已完成' : '進行中';
-
-                timeline.innerHTML += `
-                    <div class="relative pl-14 animate-fade-in">
-                        <div class="timeline-dot"></div>
-                        <div class="flex justify-between items-center mb-1">
-                            <p class="text-[10px] font-black text-pink-300 uppercase">${ev.time}</p>
-                            <button onclick="toggleEventStatus(${idx}, ${i})" 
-                                    class="px-2 py-0.5 rounded text-[8px] font-black border transition-all active:scale-95 ${statusClass} ${isEdit ? 'shadow-sm border-2' : 'border-transparent cursor-default'}">
-                                ${statusText} ${isEdit ? '<i class="fas fa-sync-alt ml-1 opacity-50"></i>' : ''}
-                            </button>
-                        </div>
-                        ${isEdit ? `
-                            <div class="bg-white/50 border border-pink-50 p-4 rounded-2xl space-y-2">
-                                <input oninput="trip.itinerary[${idx}].events[${i}].loc=this.value" value="${ev.loc}" placeholder="景點名稱" class="text-sm font-bold bg-transparent border-b border-pink-100 outline-none w-full">
-                                <textarea oninput="trip.itinerary[${idx}].events[${i}].remark=this.value" placeholder="備註 (如 Remark...)" class="text-[10px] w-full bg-transparent outline-none border-b border-pink-50 h-12 resize-none">${ev.remark || ''}</textarea>
-                                <div class="flex items-center justify-between">
-                                    <input oninput="trip.itinerary[${idx}].events[${i}].time=this.value" value="${ev.time}" placeholder="時間 (14:00)" class="text-[10px] bg-transparent outline-none w-20">
-                                    <div class="flex gap-2">
-                                        <button onclick="curEventIdx=${i};triggerFile('event-img-input')" class="text-[8px] bg-white border px-2 py-1 rounded shadow-sm">圖片</button>
-                                        <button onclick="trip.itinerary[${idx}].events.splice(${i},1);renderDay(${idx})" class="text-[8px] bg-red-50 text-red-400 px-2 py-1 rounded">刪除</button>
-                                    </div>
-                                </div>
-                            </div>
-                        ` : `
-                            <div>
-                                <h3 class="font-bold text-gray-800 leading-tight">${ev.loc}</h3>
-                                ${ev.remark ? `<p class="remark-text text-[11px] text-gray-500 mt-1 leading-relaxed">${ev.remark}</p>` : ''}
-                                ${ev.img ? `<img src="${ev.img}" class="mt-4 rounded-3xl w-full h-40 object-cover shadow-lg active:scale-[0.98] transition-transform" onclick="showBig('${ev.img}')">` : ''}
-                            </div>
-                        `}
-                    </div>`;
-            });
-            document.querySelectorAll('.day-card').forEach((el, i) => el.classList.toggle('active', i === idx));
-        }
-
-        function convert(type) {
-            const l = document.getElementById('curr-local'), h = document.getElementById('curr-home');
-            const r = trip.rate || 1;
-            if(type === 'local') h.value = (l.value * r).toFixed(1);
-            else l.value = (h.value / r).toFixed(1);
-        }
-        function updateRate(v) { trip.rate = parseFloat(v) || 1; save(); }
-
-        function renderCheck() {
-            document.getElementById('check-list').innerHTML = trip.checklist.map((c, i) => `
-                <div class="flex items-center gap-3 bg-white p-4 rounded-2xl border border-pink-50">
-                    <input type="checkbox" ${c.done?'checked':''} onchange="trip.checklist[${i}].done=this.checked;save();renderCheck()" class="w-5 h-5 accent-pink-400">
-                    <span class="text-xs font-bold ${c.done?'line-through opacity-30':''}">${c.task}</span>
-                    ${isEdit ? `<button onclick="trip.checklist.splice(${i},1);save();renderCheck()" class="ml-auto text-red-200"><i class="fas fa-trash-alt"></i></button>` : ''}
-                </div>`).join('');
-        }
-
-        function renderDocs() {
-            document.getElementById('doc-list').innerHTML = trip.docs.map((d, i) => `
-                <div class="relative">
-                    <img src="${d}" class="w-full aspect-square object-cover rounded-3xl border-2 border-white shadow-md" onclick="showBig('${d}')">
-                    ${isEdit ? `<button onclick="trip.docs.splice(${i},1);save();renderDocs()" class="absolute -top-1 -right-1 bg-red-400 text-white w-6 h-6 rounded-full text-[10px] border-2 border-white shadow"><i class="fas fa-times"></i></button>` : ''}
-                </div>`).join('') || '<p class="col-span-2 text-center text-[10px] opacity-20 py-10 font-black">無文件</p>';
-        }
-
-        function triggerFile(id) { document.getElementById(id).click(); }
-        function showBig(s) { document.getElementById('lightbox-img').src = s; document.getElementById('lightbox').style.display = 'flex'; }
-        
-        async function compress(file) {
-            return new Promise(res => {
-                const r = new FileReader(); r.readAsDataURL(file);
-                r.onload = e => {
-                    const img = new Image(); img.src = e.target.result;
-                    img.onload = () => {
-                        const c = document.createElement('canvas'); const ctx = c.getContext('2d');
-                        const max = 800; let w = img.width, h = img.height;
-                        if(w > max) { h *= max/w; w = max; }
-                        c.width = w; c.height = h; ctx.drawImage(img, 0, 0, w, h); res(c.toDataURL('image/jpeg', 0.6));
-                    }
-                }
-            });
-        }
-
-        document.getElementById('lib-file-input').onchange = async (e) => { if(e.target.files[0]) { trip.docs.push(await compress(e.target.files[0])); save(); renderDocs(); } };
-        document.getElementById('banner-img-input').onchange = async (e) => { if(e.target.files[0]) { trip.itinerary[curDayIdx].img = await compress(e.target.files[0]); save(); renderDay(curDayIdx); } };
-        document.getElementById('event-img-input').onchange = async (e) => { if(e.target.files[0]) { trip.itinerary[curDayIdx].events[curEventIdx].img = await compress(e.target.files[0]); save(); renderDay(curDayIdx); } };
-
-        function addDay() {
-            trip.itinerary.push({ date: `Day ${trip.itinerary.length+1}`, weekday: "-", title: "新的一天", img: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800", budget: 0, events: [] });
-            save(); renderDaySelector(); renderDay(trip.itinerary.length-1);
-        }
-        function delDay(i) { trip.itinerary.splice(i, 1); save(); renderDaySelector(); renderDay(0); }
-        function addEvent() { trip.itinerary[curDayIdx].events.push({ loc: '新景點/地點', time: '12:00', remark: '', status: 'pending' }); renderDay(curDayIdx); }
-        function addCheck() { const t = prompt('清單項目？'); if(t) { trip.checklist.push({ task: t, done: false }); save(); renderCheck(); } }
-        function setTab(t) {
-            document.getElementById('content-itinerary').classList.toggle('hidden', t !== 'itinerary');
-            document.getElementById('content-tools').classList.toggle('hidden', t !== 'tools');
-            document.getElementById('nav-itinerary').className = `flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] ${t=='itinerary'?'bg-[var(--jp-ink)] text-white shadow-xl':'text-gray-400'}`;
-            document.getElementById('nav-tools').className = `flex-1 py-4 flex flex-col items-center gap-1 rounded-[2rem] ${t=='tools'?'bg-[var(--jp-ink)] text-white shadow-xl':'text-gray-400'}`;
-        }
-        function resetAll() { if(confirm('確定清除所有旅程嗎？')) { localStorage.removeItem(KEY); location.reload(); } }
-
-        window.onload = init;
-    </script>
+    <script src="js/share-print.js"></script>
+    <script src="js/reminders.js"></script>
+    <script src="js/weather-locations.js"></script>
+    <script src="js/demo-data.js"></script>
+    <script src="js/onboarding.js"></script>
+    <script src="js/ui-ux.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

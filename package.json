@@ -1,0 +1,10 @@
+{
+  "name": "travel-notes-jp",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i tailwind-src.css -o vendor/tailwind.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}
