@@ -667,14 +667,24 @@ function syncTripScheduleChrome() {
     const summaryText = document.getElementById('trip-schedule-summary-text');
     const bar = document.getElementById('trip-schedule-bar');
     const chevron = document.getElementById('trip-schedule-summary-chevron');
-    const showBar = (isEdit && !travelMode) || tripScheduleExpanded;
+    const planningHidden = isEdit && !travelMode;
+    const showBar = tripScheduleExpanded && !planningHidden;
     if (summaryText) summaryText.textContent = getTripScheduleSummaryText();
     if (summary) {
-        summary.classList.toggle('hidden', isEdit && !travelMode);
+        summary.classList.toggle('hidden', planningHidden);
         summary.setAttribute('aria-expanded', showBar ? 'true' : 'false');
     }
     if (bar) bar.classList.toggle('hidden', !showBar);
     if (chevron) chevron.className = showBar ? 'fas fa-chevron-up text-muted text-xs shrink-0' : 'fas fa-chevron-down text-muted text-xs shrink-0';
+}
+
+function closeSearchPanelIfOpen() {
+    if (!searchPanelOpen) return;
+    searchPanelOpen = false;
+    document.getElementById('search-panel')?.classList.add('hidden');
+    const btn = document.getElementById('search-toggle-btn');
+    btn?.classList.remove('day-nav-search-active');
+    btn?.setAttribute('aria-expanded', 'false');
 }
 
 function toggleTripSchedule() {
@@ -702,9 +712,17 @@ function formatDayNavLabel(idx) {
 
 function updateDayNavChrome(idx) {
     const label = document.getElementById('day-nav-label');
+    const stickyTitle = document.getElementById('day-sticky-title');
     const prev = document.getElementById('day-nav-prev');
     const next = document.getElementById('day-nav-next');
+    const day = trip.itinerary[idx];
     if (label) label.textContent = formatDayNavLabel(idx);
+    if (stickyTitle) {
+        const title = (day?.title || '').trim();
+        stickyTitle.textContent = title;
+        stickyTitle.classList.toggle('hidden', !title);
+        stickyTitle.classList.toggle('is-empty', !title);
+    }
     if (prev) prev.disabled = idx <= 0;
     if (next) next.disabled = idx >= trip.itinerary.length - 1;
 }
@@ -1673,19 +1691,34 @@ function syncEditChrome() {
         el.classList.toggle('hidden', !isEdit || travelMode);
     });
     if (templates) templates.classList.toggle('hidden', !isEdit || travelMode);
-    document.getElementById('day-banner')?.classList.toggle('day-banner-compact', !isEdit || travelMode);
-    document.getElementById('main-day-card')?.classList.toggle('main-day-card-edit', isEdit && !travelMode);
+    const planningEdit = isEdit && !travelMode;
+    document.getElementById('day-banner')?.classList.toggle('day-banner-compact', travelMode || planningEdit);
+    document.getElementById('main-day-card')?.classList.toggle('main-day-card-edit', planningEdit);
+    document.getElementById('itinerary-edit-banner')?.classList.toggle('hidden', !planningEdit);
+    document.getElementById('itinerary-sticky-bar')?.classList.toggle('hidden', planningEdit);
+    document.getElementById('search-toggle-btn')?.classList.toggle('hidden', planningEdit);
+    if (planningEdit) closeSearchPanelIfOpen();
     const daySel = document.getElementById('day-selector');
-    const showPills = isEdit && !travelMode;
+    const showPills = planningEdit;
     daySel?.classList.toggle('hidden', !showPills);
     document.getElementById('pill-hint')?.classList.toggle('hidden', !showPills);
-    const dayNavBar = document.querySelector('.day-nav-bar');
-    dayNavBar?.classList.toggle('day-nav-bar-edit', showPills);
-    ['day-nav-prev', 'day-nav-label', 'day-nav-next'].forEach((id) => {
-        document.getElementById(id)?.classList.toggle('hidden', showPills);
-    });
     syncTripScheduleChrome();
     syncTravelLayout();
+}
+
+async function exitEditForTabSwitch(targetTab) {
+    if (targetTab === 'itinerary' || !isEdit || travelMode) return;
+    persistTripMetaInputs();
+    isEdit = false;
+    trip.itinerary.forEach(sortDayEventsInPlace);
+    flushSave();
+    closeSearchPanelIfOpen();
+    renderDaySelector();
+    await renderDay(curDayIdx);
+    renderCityUI();
+    renderDocs();
+    renderCheck();
+    updateFabVisibility();
 }
 
 function syncStatusBanners() {
@@ -1726,6 +1759,11 @@ function applySwUpdate() {
     });
 }
 
+function hideAppBoot() {
+    const el = document.getElementById('app-boot');
+    if (el) el.classList.add('hidden');
+}
+
 function setupSwUpdate() {
     if (!('serviceWorker' in navigator)) return;
 
@@ -1735,9 +1773,9 @@ function setupSwUpdate() {
         location.reload();
     });
 
-    window.addEventListener('load', () => {
+    const registerSw = () => {
         navigator.serviceWorker
-            .register('./sw.js')
+            .register('./sw.js', { scope: './' })
             .then((reg) => {
                 if (reg.waiting && navigator.serviceWorker.controller) showSwUpdateBanner();
 
@@ -1754,6 +1792,14 @@ function setupSwUpdate() {
                 setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
             })
             .catch(() => {});
+    };
+
+    window.addEventListener('load', () => {
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(registerSw, { timeout: 2500 });
+        } else {
+            setTimeout(registerSw, 1200);
+        }
     });
 }
 
@@ -1803,7 +1849,11 @@ async function bootstrap() {
     } catch (err) {
         showStorageWarning('舊圖片遷移失敗：' + (err.message || String(err)));
     }
-    await init();
+    try {
+        await init();
+    } finally {
+        hideAppBoot();
+    }
 }
 
 function formatRateValue(n) {
@@ -1949,6 +1999,10 @@ async function toggleEdit() {
     }
     if (isEdit) persistTripMetaInputs();
     isEdit = !isEdit;
+    if (isEdit) {
+        tripScheduleExpanded = false;
+        closeSearchPanelIfOpen();
+    }
     syncEditChrome();
     if (!isEdit) {
         trip.itinerary.forEach(sortDayEventsInPlace);
@@ -1970,6 +2024,8 @@ async function quickAddEvent() {
     if (travelMode) return;
     if (!isEdit) {
         isEdit = true;
+        tripScheduleExpanded = false;
+        closeSearchPanelIfOpen();
         syncEditChrome();
         renderCityUI();
         renderDaySelector();
@@ -2150,30 +2206,22 @@ async function renderDay(idx) {
 
     const tBox = document.getElementById('day-title-box');
     const titlePanel = document.getElementById('day-title-edit-panel');
-    const displayPanel = document.getElementById('day-title-display-panel');
-    const displayText = document.getElementById('day-title-display-text');
     const titleInput = document.getElementById('day-title-input');
     const editingDay = isEdit && !travelMode;
     tBox.innerHTML = '';
     if (editingDay) {
-        displayPanel?.classList.add('hidden');
         titlePanel?.classList.remove('hidden');
         if (titleInput) {
             titleInput.value = day.title || '';
             titleInput.oninput = () => {
                 trip.itinerary[idx].title = titleInput.value;
                 debouncedSave();
+                updateDayNavChrome(idx);
                 if (typeof syncDashboardDayTitle === 'function') syncDashboardDayTitle(titleInput.value);
             };
         }
     } else {
         titlePanel?.classList.add('hidden');
-        displayPanel?.classList.remove('hidden');
-        if (displayText) {
-            const title = (day.title || '').trim();
-            displayText.textContent = title || '未設定當日標題';
-            displayText.classList.toggle('is-empty', !title);
-        }
     }
 
     const timeline = document.getElementById('timeline');
@@ -2704,9 +2752,10 @@ async function addCheck() {
     }
 }
 
-function setTab(t) {
+async function setTab(t) {
     if (t !== 'tools' && typeof closeToolsAdvancedMenu === 'function') closeToolsAdvancedMenu();
     if (t !== 'itinerary' && typeof closeEventEditSheet === 'function') closeEventEditSheet({ silent: true });
+    await exitEditForTabSwitch(t);
     const panelIds = ['content-today', 'content-itinerary', 'content-tools'];
     const activeId = t === 'today' ? 'content-today' : t === 'tools' ? 'content-tools' : 'content-itinerary';
     panelIds.forEach((id) => {

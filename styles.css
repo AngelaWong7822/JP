@@ -1,3 +1,20 @@
+.app-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--soft-bg, #FFF9F9);
+    color: var(--text-secondary, #6b7280);
+    font-size: var(--type-body, 0.875rem);
+    font-weight: 700;
+}
+
+.app-boot.hidden {
+    display: none;
+}
+
 :root {
     --cute-pink: #FF85A1;
     --jp-ink: #2D3436;
@@ -1113,19 +1130,77 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
     text-align: left;
 }
 
-.day-nav-bar {
+.itinerary-edit-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--radius-btn);
+    background: var(--accent-soft);
+    border: 1px solid var(--cute-pink);
+}
+
+.itinerary-edit-banner-text {
+    font-size: var(--type-caption);
+    font-weight: 800;
+    color: var(--cute-pink);
+}
+
+.itinerary-edit-banner-done {
+    min-height: 2.25rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    background: var(--cute-pink);
+    color: #fff;
+    font-size: var(--type-micro);
+    font-weight: 800;
+}
+
+.itinerary-sticky-bar {
+    position: sticky;
+    top: 4.25rem;
+    z-index: 40;
     display: flex;
     align-items: center;
     gap: 0.35rem;
+    padding: 0.45rem 0.35rem;
+    margin: 0 -0.15rem;
+    border-radius: var(--radius-btn);
+    background: var(--glass-bg);
+    border: 1px solid var(--border-default);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.itinerary-sticky-center {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
 }
 
 .day-nav-label {
-    flex: 1;
-    text-align: center;
+    margin: 0;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.day-sticky-title {
+    margin: 0.1rem 0 0;
+    font-size: var(--type-micro);
+    font-weight: 800;
+    color: var(--text-secondary);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.day-sticky-title.is-empty,
+.day-sticky-title.hidden {
+    display: none;
 }
 
 .day-nav-btn {
@@ -1152,8 +1227,8 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
     border-color: var(--cute-pink);
 }
 
-.day-nav-bar-edit .day-nav-search {
-    margin-left: auto;
+.itinerary-sticky-bar .day-nav-search {
+    flex-shrink: 0;
 }
 
 #main-day-card {
@@ -1167,7 +1242,7 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
 }
 
 .day-banner {
-    height: 11rem;
+    height: 8rem;
     overflow: hidden;
 }
 
@@ -1180,7 +1255,7 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
 }
 
 .day-banner-compact {
-    height: 7.5rem;
+    height: 5rem;
 }
 
 #day-title-box h2 {
@@ -1189,26 +1264,8 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
     white-space: nowrap;
 }
 
-.day-heading-display {
-    margin-bottom: 1.25rem;
-}
-
-.day-heading-text {
-    margin: 0;
-    font-size: var(--type-title);
-    font-weight: 800;
-    color: var(--text-primary);
-    line-height: 1.35;
-    word-break: break-word;
-}
-
-.day-heading-text.is-empty {
-    color: var(--text-muted);
-    font-weight: 700;
-}
-
 .day-heading-edit {
-    margin-bottom: 1.25rem;
+    margin-bottom: 0.85rem;
 }
 
 .day-heading-input {
@@ -1244,11 +1301,15 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
 }
 
 .day-card-body {
-    padding: 1.35rem 1.25rem 2rem;
+    padding: 1rem 1.15rem 1.75rem;
 }
 
 #main-day-card:not(.main-day-card-edit) .day-card-body {
-    padding-top: 1.35rem;
+    padding-top: 1rem;
+}
+
+#main-day-card.main-day-card-edit .day-card-body {
+    padding-top: 0.85rem;
 }
 
 .timeline-event {

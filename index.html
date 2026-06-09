@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#FF85A1">
     <meta name="description" content="離線也能查看的旅行行程規劃工具">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="旅行筆記">
     <title>專屬你的旅行筆記</title>
     <link rel="manifest" href="manifest.webmanifest">
@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="app-boot" class="app-boot" aria-live="polite">載入中…</div>
 
     <div id="status-banner-stack" class="status-banner-stack hidden" role="status" aria-live="polite"></div>
 
@@ -64,7 +65,12 @@
     </header>
 
     <main class="max-w-md mx-auto p-4 space-y-4">
-        <section id="content-itinerary" class="space-y-3 flex flex-col tab-panel">
+        <section id="content-itinerary" class="space-y-2 flex flex-col tab-panel">
+            <div id="itinerary-edit-banner" class="itinerary-edit-banner hidden" role="status">
+                <span class="itinerary-edit-banner-text"><i class="fas fa-pen" aria-hidden="true"></i> 編輯中</span>
+                <button type="button" class="itinerary-edit-banner-done" onclick="toggleEdit()" aria-label="完成編輯">完成</button>
+            </div>
+
             <button type="button" id="trip-schedule-summary" class="trip-schedule-summary w-full" onclick="toggleTripSchedule()" aria-expanded="false" aria-controls="trip-schedule-bar">
                 <span id="trip-schedule-summary-text" class="type-caption font-bold text-primary truncate">規劃設定</span>
                 <i id="trip-schedule-summary-chevron" class="fas fa-chevron-down text-muted text-xs shrink-0" aria-hidden="true"></i>
@@ -81,9 +87,12 @@
                 <p id="pill-hint" class="type-micro text-muted">設定出發日期後，pill 會顯示月日同每日景點預估</p>
             </div>
 
-            <div class="day-nav-bar">
+            <div id="itinerary-sticky-bar" class="itinerary-sticky-bar">
                 <button type="button" id="day-nav-prev" class="day-nav-btn" onclick="dayNavPrev()" aria-label="上一日"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
-                <p id="day-nav-label" class="day-nav-label type-caption font-bold text-primary">第 1 日</p>
+                <div class="itinerary-sticky-center">
+                    <p id="day-nav-label" class="day-nav-label type-caption font-bold text-primary">第 1 日</p>
+                    <p id="day-sticky-title" class="day-sticky-title"></p>
+                </div>
                 <button type="button" id="day-nav-next" class="day-nav-btn" onclick="dayNavNext()" aria-label="下一日"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
                 <button type="button" id="search-toggle-btn" class="day-nav-btn day-nav-search" onclick="toggleSearchPanel()" aria-label="搜尋行程" aria-expanded="false" aria-controls="search-panel">
                     <i class="fas fa-search" aria-hidden="true"></i>
@@ -118,9 +127,6 @@
                 </div>
 
                 <div class="day-card-body relative">
-                    <div id="day-title-display-panel" class="day-heading-display hidden">
-                        <p id="day-title-display-text" class="day-heading-text"></p>
-                    </div>
                     <div id="day-title-edit-panel" class="day-heading-edit hidden">
                         <label for="day-title-input" class="sr-only">當日標題</label>
                         <input type="text" id="day-title-input" placeholder="當日標題，例：上野 · 秋葉原" class="day-heading-input" aria-label="當日標題">

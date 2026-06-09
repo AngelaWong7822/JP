@@ -1,7 +1,8 @@
-const SHELL_CACHE = 'travel-shell-v62';
-const ASSET_CACHE = 'travel-assets-v62';
+const SHELL_CACHE = 'travel-shell-v65';
+const ASSET_CACHE = 'travel-assets-v65';
 
-const SHELL_URLS = [
+/** Critical path - small files only; must finish before SW takes over. */
+const CORE_SHELL_URLS = [
     './index.html',
     './styles.css',
     './app.js',
@@ -13,18 +14,42 @@ const SHELL_URLS = [
     './js/ui-ux.js',
     './manifest.webmanifest',
     './vendor/tailwind.css',
-    './vendor/fonts/noto-sans-tc.css',
-    './vendor/fonts/NotoSansTC-400.ttf',
-    './vendor/fonts/NotoSansTC-700.ttf',
-    './vendor/fonts/NotoSansTC-900.ttf',
     './vendor/fontawesome/all.min.css',
     './vendor/fontawesome/webfonts/fa-solid-900.woff2',
-    './vendor/fontawesome/webfonts/fa-brands-400.woff2',
-    './vendor/fontawesome/webfonts/fa-regular-400.woff2',
     './icons/icon.svg',
     './icons/icon-192.png',
     './icons/icon-512.png',
 ];
+
+/** Large assets - cached in background after first paint. */
+const DEFERRED_ASSET_URLS = [
+    './vendor/fonts/noto-sans-tc.css',
+    './vendor/fonts/NotoSansTC-400.ttf',
+    './vendor/fonts/NotoSansTC-700.ttf',
+    './vendor/fonts/NotoSansTC-900.ttf',
+    './vendor/fontawesome/webfonts/fa-brands-400.woff2',
+    './vendor/fontawesome/webfonts/fa-regular-400.woff2',
+];
+
+const OFFLINE_FALLBACK_HTML =
+    '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>\u65c5\u884c\u7b46\u8a18</title></head>' +
+    '<body style="font-family:system-ui;padding:2rem;text-align:center">' +
+    '<p>\u76ee\u524d\u96e2\u7dda\uff0c\u8acb\u5148\u9023\u7dda\u958b\u555f\u4e00\u6b21\u5f8c\u518d\u4f7f\u7528\u3002</p></body></html>';
+
+function scopeUrl(path) {
+    return new URL(path, self.registration.scope).href;
+}
+
+function cacheAddSafe(cache, url) {
+    return cache.add(url).catch(() => cache.add(scopeUrl(url)).catch(() => {}));
+}
+
+async function cacheUrlList(cacheName, urls) {
+    const cache = await caches.open(cacheName);
+    await Promise.all(urls.map((u) => cacheAddSafe(cache, u)));
+}
 
 function isApiRequest(url) {
     return (
@@ -36,19 +61,72 @@ function isApiRequest(url) {
     );
 }
 
+async function matchShellDocument() {
+    const cache = await caches.open(SHELL_CACHE);
+    const candidates = [
+        scopeUrl('index.html'),
+        scopeUrl('./index.html'),
+        './index.html',
+        'index.html',
+    ];
+    for (const key of candidates) {
+        const hit = (await cache.match(key)) || (await caches.match(key));
+        if (hit) return hit;
+    }
+    const keys = await cache.keys();
+    const doc = keys.find((req) => {
+        try {
+            const p = new URL(req.url).pathname;
+            return p.endsWith('/index.html') || p.endsWith('/');
+        } catch (_) {
+            return false;
+        }
+    });
+    return doc ? cache.match(doc) : undefined;
+}
+
+async function cacheNavigateResponse(request, response) {
+    if (!response || !response.ok) return;
+    const cache = await caches.open(SHELL_CACHE);
+    const copy = response.clone();
+    await cache.put(scopeUrl('index.html'), copy);
+    try {
+        await cache.put(request, response.clone());
+    } catch (_) {
+        /* ignore duplicate put */
+    }
+}
+
+async function handleNavigate(request) {
+    try {
+        const res = await fetch(request);
+        if (res.ok) await cacheNavigateResponse(request, res);
+        return res;
+    } catch (_) {
+        const cached = (await caches.match(request)) || (await matchShellDocument());
+        if (cached) return cached;
+        return new Response(OFFLINE_FALLBACK_HTML, {
+            status: 200,
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        });
+    }
+}
+
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(SHELL_CACHE).then((cache) =>
-            cache.addAll(SHELL_URLS).catch(() => Promise.all(SHELL_URLS.map((u) => cache.add(u).catch(() => {})))),
-        ),
+        cacheUrlList(SHELL_CACHE, CORE_SHELL_URLS).then(() => {
+            self.skipWaiting();
+            cacheUrlList(ASSET_CACHE, DEFERRED_ASSET_URLS);
+        }),
     );
-    self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
-            Promise.all(keys.filter((k) => k !== SHELL_CACHE && k !== ASSET_CACHE).map((k) => caches.delete(k))),
+            Promise.all(
+                keys.filter((k) => k !== SHELL_CACHE && k !== ASSET_CACHE).map((k) => caches.delete(k)),
+            ),
         ),
     );
     self.clients.claim();
@@ -66,31 +144,28 @@ self.addEventListener('fetch', (event) => {
     if (isApiRequest(url)) return;
 
     if (request.mode === 'navigate') {
-        event.respondWith(
-            fetch(request)
-                .then((res) => {
-                    const copy = res.clone();
-                    caches.open(SHELL_CACHE).then((cache) => cache.put('./index.html', copy));
-                    return res;
-                })
-                .catch(() => caches.match('./index.html')),
-        );
+        event.respondWith(handleNavigate(request));
         return;
     }
 
-    if (url.origin === self.location.origin) {
-        event.respondWith(
-            caches.match(request).then(
-                (cached) =>
-                    cached ||
-                    fetch(request).then((res) => {
-                        if (res.ok) {
-                            const copy = res.clone();
-                            caches.open(SHELL_CACHE).then((cache) => cache.put(request, copy));
-                        }
-                        return res;
-                    }),
-            ),
-        );
-    }
+    if (url.origin !== self.location.origin) return;
+
+    event.respondWith(
+        caches.match(request).then(
+            (cached) =>
+                cached ||
+                fetch(request).then((res) => {
+                    if (res.ok) {
+                        const isHeavy =
+                            url.pathname.includes('/fonts/') ||
+                            url.pathname.includes('/webfonts/fa-brands') ||
+                            url.pathname.includes('/webfonts/fa-regular');
+                        const bucket = isHeavy ? ASSET_CACHE : SHELL_CACHE;
+                        const copy = res.clone();
+                        caches.open(bucket).then((cache) => cache.put(request, copy));
+                    }
+                    return res;
+                }),
+        ),
+    );
 });
