@@ -1,5 +1,5 @@
-const SHELL_CACHE = 'travel-shell-v104';
-const ASSET_CACHE = 'travel-assets-v104';
+const SHELL_CACHE = 'travel-shell-v106';
+const ASSET_CACHE = 'travel-assets-v106';
 
 /** Critical path - small files only; must finish before SW takes over. */
 const CORE_SHELL_URLS = [
@@ -12,6 +12,7 @@ const CORE_SHELL_URLS = [
     './js/demo-data.js',
     './js/onboarding.js',
     './js/ui-ux.js',
+    './js/trip-calendar.js',
     './manifest.webmanifest',
     './vendor/tailwind.css',
     './vendor/fontawesome/all.min.css',

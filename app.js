@@ -609,9 +609,8 @@ function goToTripScheduleSettings() {
     }
     setTimeout(() => {
         const bar = document.getElementById('trip-schedule-bar');
-        const input = document.getElementById('start-date-input');
         if (bar) bar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        input?.focus({ preventScroll: true });
+        if (typeof openTripDatePicker === 'function') openTripDatePicker();
     }, 120);
 }
 
@@ -1218,21 +1217,19 @@ async function setItineraryDayCount(count) {
 }
 
 function renderTripScheduleUI() {
-    const sd = document.getElementById('start-date-input');
-    const endInput = document.getElementById('end-date-input');
+    const triggerText = document.getElementById('trip-date-trigger-text');
     const pillHint = document.getElementById('pill-hint');
-    if (sd) sd.value = trip.startDate || '';
-    if (endInput) {
-        endInput.value = getTripEndDateIso();
-        endInput.min = trip.startDate || '';
-        endInput.disabled = !trip.startDate;
+    if (triggerText) {
+        triggerText.textContent = trip.startDate
+            ? formatTripScheduleRange()
+            : '選擇出發與結束日期';
     }
     if (pillHint) {
         if (trip.startDate) {
             pillHint.textContent = `已設定 ${formatTripScheduleRange()} · 共 ${trip.itinerary.length} 日`;
             pillHint.classList.remove('hidden');
         } else {
-            pillHint.textContent = '用日曆選出發與結束日期';
+            pillHint.textContent = '撳一下用月曆選出發同結束';
             pillHint.classList.remove('hidden');
         }
     }
@@ -1250,40 +1247,6 @@ function applyTripSchedule() {
     updateHeaderSubtitle();
     scrollToTodayCard();
     renderTodayOverview();
-}
-
-function onStartDateChange(v) {
-    trip.startDate = v || '';
-    if (trip.startDate) {
-        ensureItineraryDayCount(trip.itinerary.length);
-    } else {
-        syncItineraryDatesFromStart();
-    }
-    invalidateWeatherForecast();
-    applyTripSchedule();
-    fetchWeather();
-}
-
-async function onEndDateChange(v) {
-    if (!trip.startDate) {
-        await modalAlert('請先選出發日期', '選好出發日期後，再選結束日期。');
-        renderTripScheduleUI();
-        return;
-    }
-    if (!v || v < trip.startDate) {
-        await modalAlert('日期無效', '結束日期不可早於出發日期。');
-        renderTripScheduleUI();
-        return;
-    }
-    const days = daysBetweenInclusive(trip.startDate, v);
-    const ok = await setItineraryDayCount(days);
-    if (!ok) {
-        renderTripScheduleUI();
-        return;
-    }
-    invalidateWeatherForecast();
-    applyTripSchedule();
-    fetchWeather();
 }
 
 function applyWeatherForDay(offlineNote = '') {
@@ -1671,15 +1634,8 @@ function flushSave() {
 }
 
 function persistTripMetaInputs() {
-    const sd = document.getElementById('start-date-input');
-    const ed = document.getElementById('end-date-input');
     const lc = document.getElementById('local-currency-select');
     const hc = document.getElementById('home-currency-select');
-    if (sd) trip.startDate = sd.value || '';
-    if (ed && trip.startDate && ed.value && ed.value >= trip.startDate) {
-        const days = daysBetweenInclusive(trip.startDate, ed.value);
-        if (days > trip.itinerary.length) ensureItineraryDayCount(days);
-    }
     if (lc) trip.localCurrency = normalizeCurrency(lc.value) || 'JPY';
     if (hc) trip.homeCurrency = normalizeCurrency(hc.value) || 'HKD';
 }

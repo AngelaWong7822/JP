@@ -638,9 +638,9 @@ function openMapPrimary(loc, link) {
 }
 
 function renderEventStatusUI(dayIdx, eventIdx, ev) {
-    const canPick = isEdit || travelMode;
+    if (isEdit && !travelMode) return '';
     return renderStatusBadgeHtml(ev.status, {
-        interactive: canPick,
+        interactive: travelMode,
         dayIdx,
         eventIdx,
     });
