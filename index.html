@@ -46,13 +46,6 @@
                 <p id="header-subtitle" class="truncate">開始規劃！</p>
             </div>
         </div>
-        <div id="header-actions" class="header-actions shrink-0 ml-2">
-            <button type="button" id="travel-mode-btn" onclick="toggleTravelMode()" class="header-mode-btn header-mode-btn-labeled" aria-pressed="false" aria-label="出門模式">
-                <i class="fas fa-suitcase-rolling" aria-hidden="true"></i>
-                <span id="travel-mode-btn-label" class="header-mode-btn-text">出門</span>
-            </button>
-            <button type="button" id="edit-btn" onclick="toggleEdit()" class="header-mode-btn header-icon-btn hidden" aria-label="編輯行程"><i class="fas fa-pen" aria-hidden="true"></i></button>
-        </div>
         <div id="header-menu" class="hidden" role="menu">
             <p class="type-micro text-muted mb-2 px-0.5">我的旅程</p>
             <div id="trip-picker" class="trip-picker" role="listbox" aria-label="選擇旅程"></div>
@@ -66,21 +59,30 @@
 
     <main class="max-w-md mx-auto p-4 space-y-4">
         <section id="content-itinerary" class="space-y-2 flex flex-col tab-panel">
-            <div id="itinerary-edit-banner" class="itinerary-edit-banner hidden" role="status">
-                <span class="itinerary-edit-banner-text"><i class="fas fa-pen" aria-hidden="true"></i> 編輯中</span>
-                <button type="button" class="itinerary-edit-banner-done" onclick="toggleEdit()" aria-label="完成編輯">完成</button>
+            <div id="trip-schedule-bar" class="hidden bg-surface p-4 rounded-[1.5rem] border border-default shadow-sm space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="type-caption text-secondary font-bold shrink-0">出發日期</span>
+                    <input type="date" id="start-date-input" onchange="onStartDateChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary flex-1 min-w-[140px] border border-default min-h-[2.5rem]">
+                    <span class="type-caption text-secondary font-bold shrink-0">行程</span>
+                    <input type="number" id="trip-days-input" min="1" max="30" onchange="onTripDaysChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary w-16 border border-default min-h-[2.5rem] text-center" inputmode="numeric">
+                    <span class="type-caption text-secondary font-bold shrink-0">天</span>
+                </div>
+                <p id="pill-hint" class="type-micro text-muted">設定出發日期以對準每日行程</p>
             </div>
 
             <div id="itinerary-sticky-bar" class="itinerary-sticky-bar">
-                <button type="button" id="day-nav-prev" class="day-nav-btn" onclick="dayNavPrev()" aria-label="上一日"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
-                <div class="itinerary-sticky-center">
-                    <p id="day-nav-label" class="day-nav-label type-caption font-bold text-primary">第 1 日</p>
-                    <p id="day-sticky-title" class="day-sticky-title"></p>
+                <div id="edit-controls" class="itinerary-edit-actions hidden">
+                    <button type="button" onclick="addEvent()" class="itinerary-edit-action itinerary-edit-action-primary">+ 新增景點</button>
+                    <button type="button" onclick="addDay()" class="itinerary-edit-action">+ 新增一天</button>
                 </div>
-                <button type="button" id="day-nav-next" class="day-nav-btn" onclick="dayNavNext()" aria-label="下一日"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-                <button type="button" id="search-toggle-btn" class="day-nav-btn day-nav-search" onclick="toggleSearchPanel()" aria-label="搜尋行程" aria-expanded="false" aria-controls="search-panel">
-                    <i class="fas fa-search" aria-hidden="true"></i>
-                </button>
+                <div class="itinerary-sticky-tools">
+                    <button type="button" id="search-toggle-btn" class="day-nav-btn day-nav-search" onclick="toggleSearchPanel()" aria-label="搜尋行程" aria-expanded="false" aria-controls="search-panel">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" id="itinerary-edit-btn" class="day-nav-btn day-nav-edit hidden" onclick="toggleEdit()" aria-label="編輯行程">
+                        <i class="fas fa-pen" aria-hidden="true"></i>
+                    </button>
+                </div>
             </div>
 
             <div id="search-panel" class="hidden space-y-2">
@@ -96,9 +98,14 @@
             <div class="flex overflow-x-auto no-scrollbar px-1" id="day-selector"></div>
 
             <div id="main-day-card" class="bg-white rounded-[1.5rem] overflow-hidden relative">
-                <div id="day-banner" class="day-banner relative bg-gray-200 group">
-                    <img id="day-img" src="" alt="" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                <div id="day-banner" class="day-banner day-banner-date-only relative bg-gray-200 group">
+                    <div id="day-banner-date" class="day-banner-date">
+                        <p id="day-banner-date-main" class="day-banner-date-main">Day 1</p>
+                        <p id="day-banner-date-sub" class="day-banner-date-sub"></p>
+                        <span id="day-banner-today-mark" class="day-banner-today-mark hidden">今日</span>
+                    </div>
+                    <img id="day-img" src="" alt="" class="day-banner-photo w-full h-full object-cover">
+                    <div class="day-banner-photo absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                     <div class="hidden absolute top-4 right-4 flex gap-2" id="day-banner-actions">
                         <button type="button" onclick="copyCurrentDay()" class="btn-banner-action" title="複製整天行程" aria-label="複製整天行程"><i class="fas fa-copy"></i><span>複製</span></button>
                         <button type="button" id="btn-upload-banner" onclick="triggerFile('banner-img-input')" class="btn-banner-action" title="更換當日封面" aria-label="更換當日封面"><i class="fas fa-camera"></i><span>封面</span></button>
@@ -111,42 +118,23 @@
                 </div>
 
                 <div class="day-card-body relative">
+                    <h2 id="day-title-display" class="day-title-display hidden"></h2>
                     <div id="day-title-edit-panel" class="day-heading-edit hidden">
                         <label for="day-title-input" class="sr-only">當日標題</label>
                         <input type="text" id="day-title-input" placeholder="當日標題，例：上野 · 秋葉原" class="day-heading-input" aria-label="當日標題">
                     </div>
                     <div id="timeline" class="space-y-5 relative min-h-[50px]"></div>
-                    <div id="edit-controls" class="hidden mt-6 space-y-2">
-                        <button type="button" onclick="addEvent()" class="w-full py-4 border-2 border-dashed border-pink-100 rounded-[1.5rem] text-pink-400 type-caption font-heavy hover:bg-pink-50">+ 新增景點</button>
-                        <button type="button" onclick="addDay()" class="w-full py-3 border border-gray-200 rounded-[1.5rem] text-gray-400 type-micro font-heavy">+ 新增一天</button>
-                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Tools Tab -->
         <section id="content-tools" class="hidden space-y-4 pb-10 tab-panel">
-            <button type="button" id="trip-schedule-summary" class="trip-schedule-summary w-full" onclick="toggleTripSchedule()" aria-expanded="false" aria-controls="trip-schedule-bar">
-                <span id="trip-schedule-summary-text" class="type-caption font-bold text-primary truncate">規劃設定</span>
-                <i id="trip-schedule-summary-chevron" class="fas fa-chevron-down text-muted text-xs shrink-0" aria-hidden="true"></i>
-            </button>
-
-            <div id="trip-schedule-bar" class="hidden bg-surface p-4 rounded-[1.5rem] border border-default shadow-sm space-y-2">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="type-caption text-secondary font-bold shrink-0">出發日期</span>
-                    <input type="date" id="start-date-input" onchange="onStartDateChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary flex-1 min-w-[140px] border border-default min-h-[2.5rem]">
-                    <span class="type-caption text-secondary font-bold shrink-0">行程</span>
-                    <input type="number" id="trip-days-input" min="1" max="30" onchange="onTripDaysChange(this.value)" class="bg-surface-muted rounded-xl px-2 py-1.5 outline-none font-bold text-primary w-16 border border-default min-h-[2.5rem] text-center" inputmode="numeric">
-                    <span class="type-caption text-secondary font-bold shrink-0">天</span>
-                </div>
-                <p id="pill-hint" class="type-micro text-muted">設定出發日期後，pill 會顯示月日同每日景點預估</p>
-            </div>
-
             <p id="tools-group-travel" class="tools-group-heading">出門必備</p>
 
-            <div class="tools-travel-grid">
-            <div id="tools-weather-card" class="tools-widget-compact bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm space-y-3">
-                <h2 class="type-caption font-heavy text-primary">天氣</h2>
+            <div class="tools-travel-stack">
+            <div id="tools-weather-card" class="tools-widget-card bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm space-y-3">
+                <h2 class="type-body font-heavy text-primary">天氣</h2>
                 <div id="weather-widget" class="w-full bg-surface-muted p-3 rounded-2xl border border-default">
                     <div class="weather-widget-controls">
                         <label class="weather-day-field">
@@ -171,8 +159,8 @@
                 <p id="weather-coverage-hint" class="type-micro text-muted text-center leading-relaxed"></p>
             </div>
 
-            <div id="tools-rate-card" class="tools-widget-compact bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm space-y-3">
-                <h2 class="type-caption font-heavy text-primary">匯率</h2>
+            <div id="tools-rate-card" class="tools-widget-card bg-surface p-5 rounded-[1.5rem] border border-default shadow-sm space-y-3">
+                <h2 class="type-body font-heavy text-primary">匯率</h2>
                 <div id="rate-widget" class="w-full bg-surface-muted p-3 rounded-2xl border border-default">
                     <div class="rate-currency-row">
                         <label class="rate-currency-field">
@@ -333,7 +321,7 @@
     </button>
 
     <!-- Navigation -->
-    <nav class="app-bottom-nav fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass rounded-[2.5rem] border border-default shadow-2xl z-[100] flex p-1.5 gap-1.5" aria-label="主選單">
+    <nav class="app-bottom-nav" aria-label="主選單">
         <button type="button" onclick="setTab('today')" id="nav-today" class="nav-tab-active flex-1 py-3 flex flex-col items-center gap-0.5 rounded-[2rem]">
             <i class="fas fa-calendar-day text-sm" aria-hidden="true"></i>
             <span class="nav-tab-label">今日</span>
@@ -344,7 +332,7 @@
         </button>
         <button type="button" onclick="setTab('tools')" id="nav-tools" class="flex-1 py-3 flex flex-col items-center gap-0.5 rounded-[2rem] text-muted">
             <i class="fas fa-briefcase text-sm" aria-hidden="true"></i>
-            <span class="nav-tab-label">工具</span>
+            <span class="nav-tab-label">設定及工具</span>
         </button>
     </nav>
 

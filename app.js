@@ -281,6 +281,13 @@ function isTodayDayIndex(i) {
     return !trip.startDate && getDashboardDayIndex() === i;
 }
 
+const GENERIC_DAY_TITLES = new Set(['', '新的一天', '開啟旅程']);
+
+function displayDayTitle(title) {
+    const text = (title || '').trim();
+    return GENERIC_DAY_TITLES.has(text) ? '' : text;
+}
+
 function getTripSubtitle() {
     if (!trip.startDate) return '開始規劃！';
     const start = new Date(trip.startDate + 'T12:00:00');
@@ -500,10 +507,11 @@ function cloneEventData(ev) {
 }
 
 function cloneDayData(day) {
+    const title = displayDayTitle(day.title);
     return {
         date: day.date,
         weekday: day.weekday,
-        title: day.title + '（複製）',
+        title: title ? `${title}（複製）` : '',
         img: day.img,
         budget: day.budget,
         events: day.events.map(cloneEventData),
@@ -524,48 +532,6 @@ function moveEventTo(dayIdx, fromIdx, toIdx) {
     save();
     showToast('已調整順序');
     renderDay(dayIdx);
-}
-
-let timelineDragFromIdx = null;
-
-function initTimelineDragDrop() {
-    const timeline = document.getElementById('timeline');
-    if (!timeline || timeline._dragDropBound) return;
-    timeline._dragDropBound = true;
-    timeline.addEventListener('dragstart', (e) => {
-        const handle = e.target.closest('.event-drag-handle');
-        if (!handle) return;
-        const row = handle.closest('[data-event-idx]');
-        if (!row) return;
-        timelineDragFromIdx = parseInt(row.getAttribute('data-event-idx'), 10);
-        row.classList.add('timeline-drag-source');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(timelineDragFromIdx));
-    });
-    timeline.addEventListener('dragend', (e) => {
-        if (!e.target.closest('.event-drag-handle')) return;
-        timelineDragFromIdx = null;
-        timeline.querySelectorAll('[data-event-idx]').forEach((r) => r.classList.remove('timeline-drag-source', 'timeline-drag-over'));
-    });
-    timeline.addEventListener('dragover', (e) => {
-        if (timelineDragFromIdx == null) return;
-        const row = e.target.closest('[data-event-idx]');
-        if (!row) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        timeline.querySelectorAll('[data-event-idx]').forEach((r) => r.classList.remove('timeline-drag-over'));
-        row.classList.add('timeline-drag-over');
-    });
-    timeline.addEventListener('drop', (e) => {
-        const row = e.target.closest('[data-event-idx]');
-        if (!row || timelineDragFromIdx == null) return;
-        e.preventDefault();
-        const toIdx = parseInt(row.getAttribute('data-event-idx'), 10);
-        const fromIdx = timelineDragFromIdx;
-        timelineDragFromIdx = null;
-        timeline.querySelectorAll('[data-event-idx]').forEach((r) => r.classList.remove('timeline-drag-over', 'timeline-drag-source'));
-        moveEventTo(curDayIdx, fromIdx, toIdx);
-    });
 }
 
 function goToToolsSection(sectionId) {
@@ -636,9 +602,11 @@ function goToToday() {
 }
 
 function goToTripScheduleSettings() {
-    setTab('tools');
-    tripScheduleExpanded = true;
-    syncTripScheduleChrome();
+    setTab('itinerary');
+    if (!isEdit && !travelMode) {
+        isEdit = true;
+        syncEditChrome();
+    }
     setTimeout(() => {
         const bar = document.getElementById('trip-schedule-bar');
         const input = document.getElementById('start-date-input');
@@ -647,31 +615,13 @@ function goToTripScheduleSettings() {
     }, 120);
 }
 
-let tripScheduleExpanded = false;
 let searchPanelOpen = false;
 
-function getTripScheduleSummaryText() {
-    const days = trip.itinerary.length;
-    let total = 0;
-    for (const d of trip.itinerary) total += sumEventCosts(d.events);
-    const costPart = total > 0 ? ` · 已規劃 ${formatPillAmount(total)}` : '';
-    if (trip.startDate) {
-        const start = trip.startDate.replace(/-/g, '/');
-        return `${start} 出發 · ${days} 日${costPart}`;
-    }
-    return `未設定出發日期 · ${days} 日${costPart}`;
-}
-
 function syncTripScheduleChrome() {
-    const summary = document.getElementById('trip-schedule-summary');
-    const summaryText = document.getElementById('trip-schedule-summary-text');
     const bar = document.getElementById('trip-schedule-bar');
-    const chevron = document.getElementById('trip-schedule-summary-chevron');
-    const showBar = tripScheduleExpanded;
-    if (summaryText) summaryText.textContent = getTripScheduleSummaryText();
-    if (summary) summary.setAttribute('aria-expanded', showBar ? 'true' : 'false');
+    const onItinerary = !document.getElementById('content-itinerary')?.classList.contains('hidden');
+    const showBar = onItinerary && isEdit && !travelMode;
     if (bar) bar.classList.toggle('hidden', !showBar);
-    if (chevron) chevron.className = showBar ? 'fas fa-chevron-up text-muted text-xs shrink-0' : 'fas fa-chevron-down text-muted text-xs shrink-0';
 }
 
 function closeSearchPanelIfOpen() {
@@ -683,11 +633,6 @@ function closeSearchPanelIfOpen() {
     btn?.setAttribute('aria-expanded', 'false');
 }
 
-function toggleTripSchedule() {
-    tripScheduleExpanded = !tripScheduleExpanded;
-    syncTripScheduleChrome();
-}
-
 function toggleSearchPanel() {
     searchPanelOpen = !searchPanelOpen;
     const panel = document.getElementById('search-panel');
@@ -697,38 +642,6 @@ function toggleSearchPanel() {
     btn?.setAttribute('aria-expanded', searchPanelOpen ? 'true' : 'false');
     if (searchPanelOpen) document.getElementById('search-input')?.focus();
     else if (searchQuery) clearSearch();
-}
-
-function formatDayNavLabel(idx) {
-    const day = trip.itinerary[idx];
-    const lines = dayCardLines(trip, idx);
-    const datePart = trip.startDate ? `${lines.line1}（週${lines.line2}）` : `Day ${day.date}`;
-    return `第 ${idx + 1} / ${trip.itinerary.length} 日 · ${datePart}`;
-}
-
-function updateDayNavChrome(idx) {
-    const label = document.getElementById('day-nav-label');
-    const stickyTitle = document.getElementById('day-sticky-title');
-    const prev = document.getElementById('day-nav-prev');
-    const next = document.getElementById('day-nav-next');
-    const day = trip.itinerary[idx];
-    if (label) label.textContent = formatDayNavLabel(idx);
-    if (stickyTitle) {
-        const title = (day?.title || '').trim();
-        stickyTitle.textContent = title;
-        stickyTitle.classList.toggle('hidden', !title);
-        stickyTitle.classList.toggle('is-empty', !title);
-    }
-    if (prev) prev.disabled = idx <= 0;
-    if (next) next.disabled = idx >= trip.itinerary.length - 1;
-}
-
-function dayNavPrev() {
-    if (curDayIdx > 0) renderDay(curDayIdx - 1);
-}
-
-function dayNavNext() {
-    if (curDayIdx < trip.itinerary.length - 1) renderDay(curDayIdx + 1);
 }
 
 function sortSearchHits(hits) {
@@ -1231,7 +1144,7 @@ function ensureItineraryDayCount(count) {
         trip.itinerary.push({
             date: `Day ${i + 1}`,
             weekday: '-',
-            title: i === 0 ? '開啟旅程' : '新的一天',
+            title: '',
             img: defaultImg,
             budget: 0,
             events: [],
@@ -1250,10 +1163,10 @@ function renderTripScheduleUI() {
     if (daysInput) daysInput.value = String(trip.itinerary.length);
     if (pillHint) {
         if (trip.startDate) {
-            pillHint.textContent = `已設定出發日期 · 共 ${trip.itinerary.length} 日 · pill 顯示每日景點預估`;
+            pillHint.textContent = `已設定出發日期 · 共 ${trip.itinerary.length} 日`;
             pillHint.classList.remove('hidden');
         } else {
-            pillHint.textContent = '設定出發日期後，pill 會顯示月日同每日景點預估';
+            pillHint.textContent = '設定出發日期以對準每日行程';
             pillHint.classList.remove('hidden');
         }
     }
@@ -1288,7 +1201,7 @@ async function onTripDaysChange(v) {
     const daysInput = document.getElementById('trip-days-input');
     if (requested < trip.itinerary.length) {
         if (daysInput) daysInput.value = String(trip.itinerary.length);
-        await modalAlert('暫不支援減少天數', '請用編輯模式刪除個別日子。');
+        await modalAlert('暫不支援減少天數', '目前只可以加天數，唔可以減少。');
         return;
     }
     ensureItineraryDayCount(requested);
@@ -1362,6 +1275,42 @@ function formatBannerDayLabel(trip, day, idx) {
     return `${day.date} · ${day.weekday}`;
 }
 
+function formatBannerDateHero(trip, day, idx) {
+    const isToday = isTodayDayIndex(idx);
+    if (trip.startDate) {
+        const d = addDaysFromIso(trip.startDate, idx);
+        const w = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+        const y = d.getFullYear();
+        const m = d.getMonth() + 1;
+        const dd = d.getDate();
+        return {
+            main: `${m}/${dd}`,
+            sub: `週${w} · ${y}`,
+            isToday,
+        };
+    }
+    return {
+        main: day.date || `第 ${idx + 1} 日`,
+        sub: day.weekday || '',
+        isToday,
+    };
+}
+
+function updateDayBannerDate(idx) {
+    const day = trip.itinerary[idx];
+    if (!day) return;
+    const hero = formatBannerDateHero(trip, day, idx);
+    const mainEl = document.getElementById('day-banner-date-main');
+    const subEl = document.getElementById('day-banner-date-sub');
+    const todayMark = document.getElementById('day-banner-today-mark');
+    if (mainEl) mainEl.textContent = hero.main;
+    if (subEl) {
+        subEl.textContent = hero.sub;
+        subEl.classList.toggle('hidden', !hero.sub);
+    }
+    if (todayMark) todayMark.classList.toggle('hidden', !hero.isToday);
+}
+
 function dayCardLines(trip, i) {
     const d = trip.itinerary[i];
     if (trip.startDate) {
@@ -1384,7 +1333,7 @@ const defaultTrip = (name = '我的旅行', city = 'Tokyo') => ({
     itinerary: [{
         date: 'Day 1',
         weekday: '一',
-        title: '開啟旅程',
+        title: '',
         img: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800',
         budget: 0,
         events: [],
@@ -1452,7 +1401,7 @@ function migrateTrip(t) {
     trip.itinerary = trip.itinerary.map((day) => ({
         date: day.date != null ? day.date : 'Day',
         weekday: day.weekday != null ? day.weekday : '-',
-        title: day.title != null ? day.title : '',
+        title: displayDayTitle(day.title != null ? day.title : ''),
         img: day.img || '',
         budget: day.budget != null ? day.budget : 0,
         events: Array.isArray(day.events) ? day.events.map(migrateEvent) : [],
@@ -1656,28 +1605,14 @@ function debouncedRenderDay() {
 }
 
 function syncEditChrome() {
-    const editBtn = document.getElementById('edit-btn');
-    const travelBtn = document.getElementById('travel-mode-btn');
-    const travelLabel = document.getElementById('travel-mode-btn-label');
     const templates = document.getElementById('check-templates');
-
-    const onToday = !document.getElementById('content-today').classList.contains('hidden');
     const onItinerary = !document.getElementById('content-itinerary').classList.contains('hidden');
-
-    if (travelBtn) {
-        travelBtn.classList.toggle('header-mode-btn-active', travelMode);
-        travelBtn.setAttribute('aria-pressed', travelMode ? 'true' : 'false');
-        travelBtn.setAttribute('aria-label', travelMode ? '關閉出門模式' : '開啟出門模式');
-        if (travelLabel) travelLabel.textContent = travelMode ? '出門中' : '出門';
-        travelBtn.classList.toggle('hidden', onToday);
-    }
-
+    const editBtn = document.getElementById('itinerary-edit-btn');
+    const showEditBtn = onItinerary && !travelMode;
     if (editBtn) {
-        if (travelMode || !onItinerary) {
-            editBtn.classList.add('hidden');
-        } else {
-            editBtn.classList.remove('hidden');
-            editBtn.className = 'header-mode-btn header-icon-btn' + (isEdit ? ' is-editing' : '');
+        editBtn.classList.toggle('hidden', !showEditBtn);
+        if (showEditBtn) {
+            editBtn.classList.toggle('day-nav-edit-active', isEdit);
             editBtn.setAttribute('aria-label', isEdit ? '完成編輯' : '編輯行程');
             editBtn.innerHTML = isEdit
                 ? '<i class="fas fa-check" aria-hidden="true"></i>'
@@ -1686,22 +1621,24 @@ function syncEditChrome() {
     }
 
     document.getElementById('del-trip-menu-btn')?.classList.toggle('hidden', !isEdit || travelMode);
-    document.querySelectorAll('#edit-controls, #day-banner-actions, #btn-upload-doc, #btn-add-check').forEach((el) => {
+    document.querySelectorAll('#edit-controls, #btn-upload-doc, #btn-add-check').forEach((el) => {
         el.classList.toggle('hidden', !isEdit || travelMode);
     });
     if (templates) templates.classList.toggle('hidden', !isEdit || travelMode);
     const planningEdit = isEdit && !travelMode;
-    const showBanner = planningEdit;
-    document.getElementById('day-banner')?.classList.toggle('day-banner-hidden', !showBanner);
-    document.getElementById('day-banner')?.classList.toggle('day-banner-compact', showBanner);
+    const banner = document.getElementById('day-banner');
+    if (banner) {
+        banner.classList.toggle('day-banner-hidden', planningEdit);
+        banner.classList.toggle('day-banner-date-only', !planningEdit);
+        banner.classList.remove('day-banner-photo-mode', 'day-banner-compact');
+    }
     document.getElementById('main-day-card')?.classList.toggle('main-day-card-edit', planningEdit);
     document.getElementById('main-day-card')?.classList.toggle('main-day-card-browse', !planningEdit);
-    document.getElementById('itinerary-edit-banner')?.classList.toggle('hidden', !planningEdit);
-    document.getElementById('itinerary-sticky-bar')?.classList.toggle('hidden', planningEdit);
     document.getElementById('search-toggle-btn')?.classList.toggle('hidden', planningEdit);
+    document.getElementById('itinerary-sticky-bar')?.classList.toggle('itinerary-sticky-bar-edit', planningEdit);
     if (planningEdit) closeSearchPanelIfOpen();
     const daySel = document.getElementById('day-selector');
-    const showPills = planningEdit;
+    const showPills = onItinerary && !travelMode && trip.itinerary.length > 0;
     daySel?.classList.toggle('hidden', !showPills);
     syncTripScheduleChrome();
     syncTravelLayout();
@@ -1838,7 +1775,6 @@ async function init() {
     renderTodayOverview();
     renderSearchResults();
     if (typeof setupUiUx === 'function') setupUiUx();
-    initTimelineDragDrop();
     if (typeof setupReminders === 'function') setupReminders();
     syncTravelLayout();
     if (typeof setupOnboarding === 'function') setupOnboarding();
@@ -1891,16 +1827,16 @@ function renderTripSelector() {
 }
 
 function renderDayChipBody(d, i, lines) {
-    const costHtml = `<span class="day-card-cost">${escapeHtml(formatPillAmount(sumEventCosts(d.events)))}</span>`;
-    const dateRow =
-        isEdit && !trip.startDate
-            ? `<span class="day-chip-top day-chip-top-edit">
-                <input oninput="trip.itinerary[${i}].date=this.value;debouncedSave()" value="${escapeAttr(d.date)}" class="day-card-field day-card-field-date" placeholder="Day">
-                <input oninput="trip.itinerary[${i}].weekday=this.value;debouncedSave()" value="${escapeAttr(d.weekday)}" class="day-card-field day-card-field-wd" placeholder="週">
-               </span>`
-            : `<span class="day-chip-top">
+    const cost = sumEventCosts(d.events);
+    const costHtml = cost > 0
+        ? `<span class="day-card-cost">${escapeHtml(formatPillAmount(cost))}</span>`
+        : '';
+    const sub = lines.line2 && lines.line2 !== '-'
+        ? `<span class="type-day-sub">${escapeHtml(lines.line2)}</span>`
+        : '';
+    const dateRow = `<span class="day-chip-top">
                 <span class="type-day-label">${escapeHtml(lines.line1)}</span>
-                <span class="type-day-sub">${escapeHtml(lines.line2)}</span>
+                ${sub}
                </span>`;
     return `${dateRow}${costHtml}`;
 }
@@ -1911,13 +1847,11 @@ function renderDaySelector() {
     container.innerHTML = trip.itinerary
         .map((d, i) => {
             const lines = dayCardLines(trip, i);
-            const todayWrap = isTodayDayIndex(i) ? 'is-today' : '';
             return `
-        <div class="day-card-wrap relative flex-shrink-0 group ${todayWrap} ${noStart}">
-            <button type="button" onclick="renderDay(${i})" class="day-card day-chip ${i === curDayIdx ? 'active' : ''} ${isTodayDayIndex(i) ? 'is-today' : ''}">
+        <div class="day-card-wrap relative flex-shrink-0 group ${noStart}">
+            <button type="button" onclick="renderDay(${i})" class="day-card day-chip ${i === curDayIdx ? 'active' : ''}">
                 ${renderDayChipBody(d, i, lines)}
             </button>
-            ${isEdit && trip.itinerary.length > 1 ? `<button type="button" onclick="delDay(${i})" class="day-card-del absolute -top-1 -right-1 bg-red-400 text-white w-5 h-5 rounded-full border-2 border-white shadow-sm" aria-label="刪除此天"><i class="fas fa-times"></i></button>` : ''}
         </div>`;
         })
         .join('');
@@ -2000,10 +1934,7 @@ async function toggleEdit() {
     }
     if (isEdit) persistTripMetaInputs();
     isEdit = !isEdit;
-    if (isEdit) {
-        tripScheduleExpanded = false;
-        closeSearchPanelIfOpen();
-    }
+    if (isEdit) closeSearchPanelIfOpen();
     syncEditChrome();
     if (!isEdit) {
         trip.itinerary.forEach(sortDayEventsInPlace);
@@ -2025,7 +1956,6 @@ async function quickAddEvent() {
     if (travelMode) return;
     if (!isEdit) {
         isEdit = true;
-        tripScheduleExpanded = false;
         closeSearchPanelIfOpen();
         syncEditChrome();
         renderCityUI();
@@ -2204,20 +2134,31 @@ async function renderDay(idx) {
     document.getElementById('day-img').src = dayImgUrl || day.img;
     document.getElementById('day-img').alt = day.title || '';
     document.getElementById('day-label').innerText = formatBannerDayLabel(trip, day, idx);
+    updateDayBannerDate(idx);
 
     const tBox = document.getElementById('day-title-box');
+    const titleDisplay = document.getElementById('day-title-display');
     const titlePanel = document.getElementById('day-title-edit-panel');
     const titleInput = document.getElementById('day-title-input');
     const editingDay = isEdit && !travelMode;
+    const titleText = displayDayTitle(day.title);
     tBox.innerHTML = '';
+    if (titleDisplay) {
+        if (!editingDay && titleText) {
+            titleDisplay.textContent = titleText;
+            titleDisplay.classList.remove('hidden');
+        } else {
+            titleDisplay.textContent = '';
+            titleDisplay.classList.add('hidden');
+        }
+    }
     if (editingDay) {
         titlePanel?.classList.remove('hidden');
         if (titleInput) {
-            titleInput.value = day.title || '';
+            titleInput.value = titleText;
             titleInput.oninput = () => {
                 trip.itinerary[idx].title = titleInput.value;
                 debouncedSave();
-                updateDayNavChrome(idx);
                 if (typeof syncDashboardDayTitle === 'function') syncDashboardDayTitle(titleInput.value);
             };
         }
@@ -2233,13 +2174,13 @@ async function renderDay(idx) {
         timeline.innerHTML += `<p class="pl-14 type-body text-muted">沒有符合「${escapeHtml(searchQuery)}」的景點</p>`;
     } else if (entries.length === 0 && day.events.length === 0) {
         const cta = !travelMode
-            ? `<button type="button" class="empty-state-cta empty-state-cta-lg" onclick="quickAddEvent()"><i class="fas fa-plus mr-1"></i>加第一個景點</button>`
+            ? `<button type="button" class="timeline-empty-state-cta" onclick="quickAddEvent()"><i class="fas fa-plus mr-1"></i>加第一個景點</button>`
             : '';
         timeline.innerHTML += `
-            <div class="empty-state pl-4">
-                <i class="fas fa-map-marker-alt"></i>
-                <p class="type-body font-bold">呢日未有景點</p>
-                <p class="type-caption mt-1 opacity-70">${travelMode ? '今日可以休息下' : '撳下面掣開始規劃'}</p>
+            <div class="timeline-empty-state">
+                <i class="fas fa-map-marker-alt timeline-empty-state-icon" aria-hidden="true"></i>
+                <p class="timeline-empty-state-title">呢日未有景點</p>
+                <p class="timeline-empty-state-hint">${travelMode ? '今日可以休息下' : '撳下面掣開始規劃'}</p>
                 ${cta}
             </div>`;
     }
@@ -2270,7 +2211,6 @@ async function renderDay(idx) {
         const reorderBtns =
             isEdit && !travelMode
                 ? `<div class="event-reorder shrink-0" onclick="event.stopPropagation()">
-                    <button type="button" class="event-drag-handle" draggable="true" aria-label="拖曳排序"><i class="fas fa-grip-vertical"></i></button>
                     <div class="event-reorder-moves">
                         <button type="button" onclick="moveEvent(${idx}, ${i}, -1)" ${i === 0 ? 'disabled' : ''} aria-label="上移景點"><i class="fas fa-chevron-up"></i></button>
                         <button type="button" onclick="moveEvent(${idx}, ${i}, 1)" ${i === day.events.length - 1 ? 'disabled' : ''} aria-label="下移景點"><i class="fas fa-chevron-down"></i></button>
@@ -2294,6 +2234,7 @@ async function renderDay(idx) {
                         </button>
                         ${statusUI ? `<span class="timeline-event-edit-status">${statusUI}</span>` : ''}
                         ${editImgInd}
+                        <button type="button" class="timeline-event-edit-del" onclick="event.stopPropagation();removeEvent(${idx}, ${i})" aria-label="刪除景點"><i class="fas fa-trash-alt"></i></button>
                         <button type="button" class="timeline-event-edit-hint" onclick="openEventEditSheet(${idx}, ${i})" aria-label="編輯景點"><i class="fas fa-pen"></i></button>
                     </div>
                 </div>
@@ -2316,7 +2257,6 @@ async function renderDay(idx) {
             </div>`;
     });
     document.querySelectorAll('.day-card').forEach((el, i) => el.classList.toggle('active', i === idx));
-    updateDayNavChrome(idx);
     updateHeaderSubtitle();
     renderTodayOverview();
     if (idx !== lastRenderedDayIdx) {
@@ -2571,9 +2511,11 @@ async function removeEvent(dayIdx, eventIdx) {
     if (isIdbRef(ev.img)) await deleteImageRef(ev.img);
     trip.itinerary[dayIdx].events.splice(eventIdx, 1);
     save();
+    if (typeof closeEventEditSheet === 'function') closeEventEditSheet({ silent: true });
     await renderDay(dayIdx);
     renderDaySelector();
     renderSearchResults();
+    syncTripScheduleChrome();
 }
 
 function triggerFile(id) {
@@ -2693,7 +2635,7 @@ function addDay() {
     trip.itinerary.push({
         date: `Day ${trip.itinerary.length + 1}`,
         weekday: '-',
-        title: '新的一天',
+        title: '',
         img: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800',
         budget: 0,
         events: [],

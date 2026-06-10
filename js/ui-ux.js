@@ -159,10 +159,16 @@ function formatEventCountdown(ev, liveToday = true) {
 function syncDashboardDayTitle(title) {
     const el = document.getElementById('dashboard-day-title');
     if (!el) return;
-    const text = (title || '').trim();
-    el.textContent = text || '未設定當日標題';
-    el.classList.toggle('is-empty', !text);
-    el.classList.remove('hidden');
+    const text = typeof displayDayTitle === 'function' ? displayDayTitle(title) : (title || '').trim();
+    const show = !!text;
+    if (show) {
+        el.textContent = text;
+        el.classList.remove('hidden', 'is-empty');
+    } else {
+        el.textContent = '';
+        el.classList.add('hidden');
+        el.classList.add('is-empty');
+    }
 }
 
 function renderCountdownBadge(cd) {
@@ -485,8 +491,8 @@ function renderTravelDashboard() {
             titleEl.innerHTML = '<i class="fas fa-calendar-day text-pink-400 mr-1"></i>今日總覽';
         }
         if (hintEl) {
-            hintEl.textContent = trip.startDate ? getTripSubtitle() : '請先設定出發日期';
-            hintEl.classList.remove('hidden');
+            hintEl.textContent = '';
+            hintEl.classList.add('hidden');
         }
         document.getElementById('dashboard-day-title')?.classList.add('hidden');
         stopDashboardCountdownTimer();
@@ -499,16 +505,9 @@ function renderTravelDashboard() {
             hero.innerHTML = '';
         }
         list.classList.remove('hidden');
-        list.innerHTML = `<div class="dashboard-empty-state">
-            <p class="type-caption text-muted text-center">${
-                trip.itinerary?.length ? '設定出發日期後，今日總覽會自動對準' : '請先新增行程'
-            }</p>
-            ${
-                trip.itinerary?.length
-                    ? '<button type="button" class="btn-primary-sm w-full py-3 mt-3" onclick="goToTripScheduleSettings()">去設定</button>'
-                    : ''
-            }
-        </div>`;
+        list.innerHTML = trip.itinerary?.length
+            ? ''
+            : `<div class="dashboard-empty-state"><p class="type-caption text-muted text-center">請先新增行程</p></div>`;
         return;
     }
 
@@ -522,16 +521,8 @@ function renderTravelDashboard() {
     const day = trip.itinerary[todayIdx];
     syncDashboardDayTitle(day.title);
     if (hintEl) {
-        if (realToday) {
-            hintEl.classList.add('hidden');
-            hintEl.textContent = '';
-        } else if (trip.startDate) {
-            hintEl.textContent = getTripSubtitle();
-            hintEl.classList.remove('hidden');
-        } else {
-            hintEl.textContent = '設定出發日可對準真實今日';
-            hintEl.classList.remove('hidden');
-        }
+        hintEl.textContent = '';
+        hintEl.classList.add('hidden');
     }
     if (jumpBtn) jumpBtn.classList.remove('hidden');
 
@@ -593,13 +584,6 @@ function renderTravelDashboard() {
         }
     }
 
-    const setupBanner = !trip.startDate
-        ? `<div class="dashboard-setup-banner">
-            <p class="type-micro text-muted">設定出發日期後，今日總覽會自動對準</p>
-            <button type="button" class="btn-ghost-sm mt-2 w-full" onclick="goToTripScheduleSettings()">去設定</button>
-           </div>`
-        : '';
-
     const renderEventRow = ({ ev, i }, isNext) => {
         const statusBadge = renderStatusBadgeHtml(ev.status, {
             interactive: true,
@@ -620,7 +604,7 @@ function renderTravelDashboard() {
 
     if (entries.length === 0) {
         list.classList.remove('hidden');
-        list.innerHTML = `${setupBanner}<p class="dashboard-divider-label">今日未有景點安排</p>`;
+        list.innerHTML = `<p class="dashboard-divider-label">今日未有景點安排</p>`;
     } else if (hasUpcomingHero) {
         const restEntries = entries.filter(({ i }) => i !== next.i);
         list.classList.remove('hidden');
@@ -629,13 +613,13 @@ function renderTravelDashboard() {
         } else if (!dashboardRestExpanded) {
             list.innerHTML = `<button type="button" class="dashboard-rest-toggle" onclick="toggleDashboardRestList()" aria-expanded="false">其餘 ${restEntries.length} 個景點</button>`;
         } else {
-            list.innerHTML = `${setupBanner}<button type="button" class="dashboard-rest-toggle" onclick="toggleDashboardRestList()" aria-expanded="true">收起列表</button>${restEntries
+            list.innerHTML = `<button type="button" class="dashboard-rest-toggle" onclick="toggleDashboardRestList()" aria-expanded="true">收起列表</button>${restEntries
                 .map((entry) => renderEventRow(entry, false))
                 .join('')}`;
         }
     } else {
         list.classList.remove('hidden');
-        list.innerHTML = `${setupBanner}<p class="dashboard-divider-label">全日行程</p>${entries
+        list.innerHTML = `<p class="dashboard-divider-label">全日行程</p>${entries
             .map((entry) => renderEventRow(entry, next.type === 'upcoming' && entry.i === next.i))
             .join('')}`;
     }
