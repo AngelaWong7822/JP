@@ -83,11 +83,11 @@
             </div>
 
             <div id="search-panel" class="hidden space-y-2">
-                <div id="search-wrap" class="relative">
+                <div id="search-wrap" class="search-field">
                     <label class="sr-only" for="search-input">搜尋全旅程景點與備註</label>
-                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-muted text-sm pointer-events-none" aria-hidden="true"></i>
-                    <input type="search" id="search-input" oninput="onSearchInput(this.value)" placeholder="搜尋景點、備註、訂位編號…" class="w-full pl-11 pr-10 py-3 min-h-[2.75rem] rounded-2xl border border-default bg-surface type-body font-bold outline-none focus:ring-2 focus:ring-[var(--border-soft)]">
-                    <button type="button" id="search-clear" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-muted text-base p-2 min-w-[2.75rem] min-h-[2.75rem]" aria-label="清除搜尋"><i class="fas fa-times-circle"></i></button>
+                    <span class="search-field-icon" aria-hidden="true"><i class="fas fa-search"></i></span>
+                    <input type="text" id="search-input" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false" oninput="onSearchInput(this.value)" placeholder="搜尋景點、備註、訂位編號…" class="search-field-input">
+                    <button type="button" id="search-clear" onclick="clearSearch()" class="search-field-clear hidden" aria-label="清除搜尋"><i class="fas fa-times-circle"></i></button>
                 </div>
                 <div id="search-results" class="hidden bg-surface rounded-2xl border border-default overflow-hidden"></div>
             </div>
