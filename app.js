@@ -364,15 +364,15 @@ function saveUiPrefs() {
     localStorage.setItem(UI_PREFS_KEY, JSON.stringify(prefs));
 }
 
-function restoreUiPrefs() {
+async function restoreUiPrefs() {
     const prefs = getUiPrefs();
     if (prefs.days && prefs.days[data.activeIdx] != null) {
         const idx = prefs.days[data.activeIdx];
         if (idx >= 0 && idx < trip.itinerary.length) curDayIdx = idx;
     }
-    if (prefs.activeTab === 'tools') setTab('tools');
-    else if (prefs.activeTab === 'itinerary') setTab('itinerary');
-    else setTab('today');
+    if (prefs.activeTab === 'tools') await setTab('tools');
+    else if (prefs.activeTab === 'itinerary') await setTab('itinerary');
+    else await setTab('today');
 }
 
 function isDarkMode() {
@@ -1604,6 +1604,17 @@ function debouncedRenderDay() {
     renderDayTimer = setTimeout(() => renderDay(curDayIdx), 300);
 }
 
+function syncItineraryChromeOffset() {
+    const onItinerary = !document.getElementById('content-itinerary')?.classList.contains('hidden');
+    if (!onItinerary) return;
+    const stickyBar = document.getElementById('itinerary-sticky-bar');
+    const chromeH = stickyBar?.offsetHeight || 0;
+    document.documentElement.style.setProperty(
+        '--itinerary-chrome-offset',
+        `calc(var(--header-offset) + ${chromeH}px + 0.35rem)`,
+    );
+}
+
 function syncEditChrome() {
     const templates = document.getElementById('check-templates');
     const onItinerary = !document.getElementById('content-itinerary').classList.contains('hidden');
@@ -1642,6 +1653,7 @@ function syncEditChrome() {
     daySel?.classList.toggle('hidden', !showPills);
     syncTripScheduleChrome();
     syncTravelLayout();
+    requestAnimationFrame(() => syncItineraryChromeOffset());
 }
 
 async function exitEditForTabSwitch(targetTab) {
@@ -1752,8 +1764,8 @@ function setupPwaInstallHint() {
 
 async function init() {
     applyTheme();
-    restoreUiPrefs();
-    if (travelMode) setTab('today');
+    await restoreUiPrefs();
+    if (travelMode) await setTab('today');
     updateOnlineStatus();
     syncEditChrome();
     renderTripSelector();
@@ -1778,6 +1790,19 @@ async function init() {
     if (typeof setupReminders === 'function') setupReminders();
     syncTravelLayout();
     if (typeof setupOnboarding === 'function') setupOnboarding();
+    if (!window._itineraryChromeResizeBound) {
+        window._itineraryChromeResizeBound = true;
+        let itineraryChromeResizeTimer = null;
+        window.addEventListener(
+            'resize',
+            () => {
+                clearTimeout(itineraryChromeResizeTimer);
+                itineraryChromeResizeTimer = setTimeout(syncItineraryChromeOffset, 100);
+            },
+            { passive: true },
+        );
+    }
+    syncItineraryChromeOffset();
 }
 
 async function bootstrap() {
@@ -1855,6 +1880,7 @@ function renderDaySelector() {
         </div>`;
         })
         .join('');
+    requestAnimationFrame(() => syncItineraryChromeOffset());
 }
 
 function renderCityUI() {
@@ -2233,9 +2259,11 @@ async function renderDay(idx) {
                             <span class="timeline-event-loc truncate">${escapeHtml(ev.loc || '景點')}</span>
                         </button>
                         ${statusUI ? `<span class="timeline-event-edit-status">${statusUI}</span>` : ''}
-                        ${editImgInd}
-                        <button type="button" class="timeline-event-edit-del" onclick="event.stopPropagation();removeEvent(${idx}, ${i})" aria-label="刪除景點"><i class="fas fa-trash-alt"></i></button>
-                        <button type="button" class="timeline-event-edit-hint" onclick="openEventEditSheet(${idx}, ${i})" aria-label="編輯景點"><i class="fas fa-pen"></i></button>
+                        <div class="timeline-event-edit-actions">
+                            ${editImgInd}
+                            <button type="button" class="timeline-event-edit-del" onclick="event.stopPropagation();removeEvent(${idx}, ${i})" aria-label="刪除景點"><i class="fas fa-trash-alt"></i></button>
+                            <button type="button" class="timeline-event-edit-hint" onclick="openEventEditSheet(${idx}, ${i})" aria-label="編輯景點"><i class="fas fa-pen"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>`;

@@ -52,6 +52,7 @@
     --header-safe-top: env(safe-area-inset-top, 0px);
     --header-bar-height: 3.5rem;
     --header-offset: calc(var(--header-safe-top) + var(--header-bar-height));
+    --itinerary-chrome-offset: calc(var(--header-offset) + 3.5rem);
     --surface-inverse: #2D3436;
     --text-on-inverse: #ffffff;
 }
@@ -1171,9 +1172,35 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
 }
 
 #day-selector {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     gap: 0.5rem;
-    padding-top: 0.35rem;
-    padding-bottom: 0.35rem;
+    min-height: 4.5rem;
+    padding: 0.35rem max(0.25rem, env(safe-area-inset-right)) 0.35rem max(0.25rem, env(safe-area-inset-left));
+    scroll-padding-inline: 0.5rem;
+}
+
+#day-selector.hidden {
+    display: none !important;
+}
+
+.day-card-wrap {
+    flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+    #day-selector {
+        position: sticky;
+        top: var(--itinerary-chrome-offset);
+        z-index: 35;
+        background: var(--soft-bg);
+        margin: 0 -0.25rem;
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+    }
 }
 
 .trip-schedule-summary {
@@ -1238,13 +1265,14 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
     align-items: center;
     justify-content: flex-end;
     gap: 0.35rem;
-    padding: 0.45rem 0.35rem;
+    padding: 0.45rem max(0.35rem, env(safe-area-inset-right)) 0.45rem max(0.35rem, env(safe-area-inset-left));
     margin: 0 -0.15rem;
     border-radius: var(--radius-btn);
     background: var(--glass-bg);
     border: 1px solid var(--border-default);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    overflow: visible;
 }
 
 .itinerary-sticky-bar-edit {
@@ -1262,6 +1290,15 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
     align-items: center;
     gap: 0.35rem;
     flex-shrink: 0;
+    margin-left: auto;
+}
+
+.timeline-event-edit-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 .itinerary-sticky-center {
@@ -1327,6 +1364,28 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
 .itinerary-sticky-tools .day-nav-edit.hidden,
 .itinerary-sticky-tools .day-nav-search.hidden {
     display: none;
+}
+
+@media (max-width: 480px) {
+    .itinerary-sticky-bar-edit {
+        flex-wrap: wrap;
+        align-items: stretch;
+    }
+
+    .itinerary-sticky-bar-edit .itinerary-edit-actions {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .itinerary-sticky-bar-edit .itinerary-sticky-tools {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .itinerary-edit-action {
+        font-size: var(--type-micro);
+        padding: 0.5rem 0.4rem;
+    }
 }
 
 #main-day-card {
@@ -2230,9 +2289,30 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
 }
 
 #fab-quick-add {
+    position: fixed;
+    right: max(1.15rem, env(safe-area-inset-right, 0px));
     bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
-    width: var(--touch-min);
-    height: var(--touch-min);
+    z-index: 110;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 9999px;
+    background: var(--cute-pink);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(255, 133, 161, 0.45);
+    font-size: 1.25rem;
+    border: none;
+    transition: transform 0.15s ease;
+}
+
+#fab-quick-add:active {
+    transform: scale(0.95);
+}
+
+#fab-quick-add.hidden {
+    display: none !important;
 }
 
 .doc-pdf-card {
