@@ -1011,6 +1011,45 @@ function addDaysFromIso(isoDateStr, n) {
     return d;
 }
 
+function daysBetweenInclusive(startIso, endIso) {
+    if (!startIso || !endIso) return 1;
+    const start = new Date(startIso + 'T12:00:00');
+    const end = new Date(endIso + 'T12:00:00');
+    const diff = Math.round((end.getTime() - start.getTime()) / 86400000);
+    return Math.max(1, diff + 1);
+}
+
+function getTripEndDateIso() {
+    if (!trip.startDate || !trip.itinerary.length) return '';
+    return formatISODate(addDaysFromIso(trip.startDate, trip.itinerary.length - 1));
+}
+
+function formatTripScheduleRange() {
+    if (!trip.startDate) return '';
+    const endIso = getTripEndDateIso();
+    if (!endIso) return trip.startDate;
+    const fmt = (iso) => {
+        const [y, m, d] = iso.split('-');
+        return `${m}/${d}/${y}`;
+    };
+    return `${fmt(trip.startDate)} – ${fmt(endIso)}`;
+}
+
+async function cleanupDayImages(day) {
+    if (isIdbRef(day.img)) await deleteImageRef(day.img);
+    for (const ev of day.events) {
+        if (isIdbRef(ev.img)) await deleteImageRef(ev.img);
+    }
+}
+
+function dayHasScheduleContent(day) {
+    return (
+        day.events.length > 0 ||
+        !!displayDayTitle(day.title) ||
+        (day.budget != null && Number(day.budget) > 0)
+    );
+}
+
 function formatISODate(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -1110,6 +1149,7 @@ function onWeatherLocationSelect(cityId) {
     trip.city = loc.id;
     invalidateWeatherForecast();
     debouncedSave();
+    updateDayBannerPlace();
     fetchWeather();
 }
 
@@ -1155,18 +1195,44 @@ function ensureItineraryDayCount(count) {
     return n;
 }
 
+async function setItineraryDayCount(count) {
+    const n = Math.max(1, Math.min(MAX_TRIP_DAYS, parseInt(count, 10) || 1));
+    if (n < trip.itinerary.length) {
+        const removing = trip.itinerary.slice(n);
+        if (removing.some(dayHasScheduleContent)) {
+            const ok = await modalConfirm(
+                '縮短行程',
+                `結束日期會刪除最後 ${removing.length} 天嘅景點同設定，確定？`,
+                { danger: true, confirmText: '刪除' },
+            );
+            if (!ok) return false;
+        }
+        while (trip.itinerary.length > n) {
+            const day = trip.itinerary[trip.itinerary.length - 1];
+            await cleanupDayImages(day);
+            trip.itinerary.pop();
+        }
+    }
+    ensureItineraryDayCount(n);
+    return true;
+}
+
 function renderTripScheduleUI() {
     const sd = document.getElementById('start-date-input');
-    const daysInput = document.getElementById('trip-days-input');
+    const endInput = document.getElementById('end-date-input');
     const pillHint = document.getElementById('pill-hint');
     if (sd) sd.value = trip.startDate || '';
-    if (daysInput) daysInput.value = String(trip.itinerary.length);
+    if (endInput) {
+        endInput.value = getTripEndDateIso();
+        endInput.min = trip.startDate || '';
+        endInput.disabled = !trip.startDate;
+    }
     if (pillHint) {
         if (trip.startDate) {
-            pillHint.textContent = `已設定出發日期 · 共 ${trip.itinerary.length} 日`;
+            pillHint.textContent = `已設定 ${formatTripScheduleRange()} · 共 ${trip.itinerary.length} 日`;
             pillHint.classList.remove('hidden');
         } else {
-            pillHint.textContent = '設定出發日期以對準每日行程';
+            pillHint.textContent = '用日曆選出發與結束日期';
             pillHint.classList.remove('hidden');
         }
     }
@@ -1188,24 +1254,33 @@ function applyTripSchedule() {
 
 function onStartDateChange(v) {
     trip.startDate = v || '';
-    const daysInput = document.getElementById('trip-days-input');
-    if (daysInput) ensureItineraryDayCount(daysInput.value);
-    else syncItineraryDatesFromStart();
+    if (trip.startDate) {
+        ensureItineraryDayCount(trip.itinerary.length);
+    } else {
+        syncItineraryDatesFromStart();
+    }
     invalidateWeatherForecast();
     applyTripSchedule();
     fetchWeather();
 }
 
-async function onTripDaysChange(v) {
-    const requested = Math.max(1, Math.min(MAX_TRIP_DAYS, parseInt(v, 10) || 1));
-    const daysInput = document.getElementById('trip-days-input');
-    if (requested < trip.itinerary.length) {
-        if (daysInput) daysInput.value = String(trip.itinerary.length);
-        await modalAlert('暫不支援減少天數', '目前只可以加天數，唔可以減少。');
+async function onEndDateChange(v) {
+    if (!trip.startDate) {
+        await modalAlert('請先選出發日期', '選好出發日期後，再選結束日期。');
+        renderTripScheduleUI();
         return;
     }
-    ensureItineraryDayCount(requested);
-    if (daysInput) daysInput.value = String(trip.itinerary.length);
+    if (!v || v < trip.startDate) {
+        await modalAlert('日期無效', '結束日期不可早於出發日期。');
+        renderTripScheduleUI();
+        return;
+    }
+    const days = daysBetweenInclusive(trip.startDate, v);
+    const ok = await setItineraryDayCount(days);
+    if (!ok) {
+        renderTripScheduleUI();
+        return;
+    }
     invalidateWeatherForecast();
     applyTripSchedule();
     fetchWeather();
@@ -1215,6 +1290,7 @@ function applyWeatherForDay(offlineNote = '') {
     const loc = getWeatherLocation(trip.city);
     if (!loc.id) {
         setWeatherUI({ temp: '--°C', detail: '請選擇地點', isError: true });
+        updateDayBannerWeather(curDayIdx);
         return;
     }
 
@@ -1234,6 +1310,7 @@ function applyWeatherForDay(offlineNote = '') {
             setWeatherUI({ temp: '--°C', detail: '請設定出發日期' + offlineNote, isError: true });
         }
         renderTodayOverview();
+        updateDayBannerWeather(curDayIdx);
         return;
     }
 
@@ -1241,12 +1318,14 @@ function applyWeatherForDay(offlineNote = '') {
     const targetIso = getWeatherDayIso(weatherDayIdx);
     if (!daily?.time || !targetIso) {
         setWeatherUI({ temp: '--°C', detail: '載入中…', isError: true });
+        updateDayBannerWeather(curDayIdx);
         return;
     }
 
     const i = daily.time.indexOf(targetIso);
     if (i < 0) {
         setWeatherUI({ temp: '--°C', detail: `${weatherDaySelectLabel(weatherDayIdx)} 超出預報範圍`, isError: true });
+        updateDayBannerWeather(curDayIdx);
         return;
     }
 
@@ -1261,6 +1340,7 @@ function applyWeatherForDay(offlineNote = '') {
     });
     updateWeatherCoverageHint();
     renderTodayOverview();
+    updateDayBannerWeather(curDayIdx);
 }
 
 function formatBannerDayLabel(trip, day, idx) {
@@ -1296,6 +1376,78 @@ function formatBannerDateHero(trip, day, idx) {
     };
 }
 
+function getTripDestinationLabel() {
+    const loc = getWeatherLocation(trip.city);
+    return loc.label || loc.id || '';
+}
+
+function updateDayBannerPlace() {
+    const wrap = document.getElementById('day-banner-place');
+    const textEl = document.getElementById('day-banner-place-text');
+    if (!wrap || !textEl) return;
+    const place = getTripDestinationLabel();
+    if (!place) {
+        wrap.classList.add('hidden');
+        textEl.textContent = '';
+        return;
+    }
+    wrap.classList.remove('hidden');
+    textEl.textContent = place;
+}
+
+function getDayBannerWeather(idx) {
+    const loc = getWeatherLocation(trip.city);
+    if (!loc.id) return null;
+
+    if (!trip.startDate) {
+        const cw = weatherForecastCache.current;
+        if (!cw) return null;
+        return {
+            temp: `${Math.round(cw.temperature)}°`,
+            code: cw.weathercode,
+            mood: weatherMoodLabel(cw.weathercode),
+        };
+    }
+
+    const daily = weatherForecastCache.daily;
+    const targetIso = getWeatherDayIso(idx);
+    if (!daily?.time || !targetIso) return null;
+
+    const i = daily.time.indexOf(targetIso);
+    if (i < 0) return { temp: '--', code: null, mood: '超出預報範圍' };
+
+    const max = Math.round(daily.temperature_2m_max[i]);
+    const min = Math.round(daily.temperature_2m_min[i]);
+    const code = daily.weather_code[i];
+    const temp = max === min ? `${max}°` : `${min}–${max}°`;
+    return { temp, code, mood: weatherMoodLabel(code) };
+}
+
+function updateDayBannerWeather(idx) {
+    const wrap = document.getElementById('day-banner-weather');
+    const iconEl = document.getElementById('day-banner-weather-icon');
+    const tempEl = document.getElementById('day-banner-weather-temp');
+    const moodEl = document.getElementById('day-banner-weather-mood');
+    if (!wrap) return;
+
+    const w = getDayBannerWeather(idx);
+    if (!w) {
+        wrap.classList.add('hidden');
+        return;
+    }
+
+    wrap.classList.remove('hidden');
+    if (iconEl) {
+        iconEl.innerHTML =
+            w.code != null ? weatherIconHtml(w.code) : '<i class="fas fa-cloud text-gray-300"></i>';
+    }
+    if (tempEl) tempEl.textContent = w.temp;
+    if (moodEl) {
+        moodEl.textContent = w.mood || '';
+        moodEl.classList.toggle('hidden', !w.mood);
+    }
+}
+
 function updateDayBannerDate(idx) {
     const day = trip.itinerary[idx];
     if (!day) return;
@@ -1309,6 +1461,8 @@ function updateDayBannerDate(idx) {
         subEl.classList.toggle('hidden', !hero.sub);
     }
     if (todayMark) todayMark.classList.toggle('hidden', !hero.isToday);
+    updateDayBannerPlace();
+    updateDayBannerWeather(idx);
 }
 
 function dayCardLines(trip, i) {
@@ -1518,9 +1672,14 @@ function flushSave() {
 
 function persistTripMetaInputs() {
     const sd = document.getElementById('start-date-input');
+    const ed = document.getElementById('end-date-input');
     const lc = document.getElementById('local-currency-select');
     const hc = document.getElementById('home-currency-select');
     if (sd) trip.startDate = sd.value || '';
+    if (ed && trip.startDate && ed.value && ed.value >= trip.startDate) {
+        const days = daysBetweenInclusive(trip.startDate, ed.value);
+        if (days > trip.itinerary.length) ensureItineraryDayCount(days);
+    }
     if (lc) trip.localCurrency = normalizeCurrency(lc.value) || 'JPY';
     if (hc) trip.homeCurrency = normalizeCurrency(hc.value) || 'HKD';
 }
@@ -1615,9 +1774,18 @@ function syncItineraryChromeOffset() {
     );
 }
 
+function isToolsTabActive() {
+    return !document.getElementById('content-tools')?.classList.contains('hidden');
+}
+
+function canEditToolsContent() {
+    return !travelMode && isToolsTabActive();
+}
+
 function syncEditChrome() {
     const templates = document.getElementById('check-templates');
     const onItinerary = !document.getElementById('content-itinerary').classList.contains('hidden');
+    const toolsEdit = canEditToolsContent();
     const editBtn = document.getElementById('itinerary-edit-btn');
     const showEditBtn = onItinerary && !travelMode;
     if (editBtn) {
@@ -1632,10 +1800,13 @@ function syncEditChrome() {
     }
 
     document.getElementById('del-trip-menu-btn')?.classList.toggle('hidden', !isEdit || travelMode);
-    document.querySelectorAll('#edit-controls, #btn-upload-doc, #btn-add-check').forEach((el) => {
+    document.querySelectorAll('#edit-controls').forEach((el) => {
         el.classList.toggle('hidden', !isEdit || travelMode);
     });
-    if (templates) templates.classList.toggle('hidden', !isEdit || travelMode);
+    document.querySelectorAll('#btn-upload-doc, #btn-add-check').forEach((el) => {
+        el.classList.toggle('hidden', !toolsEdit);
+    });
+    if (templates) templates.classList.toggle('hidden', !toolsEdit);
     const planningEdit = isEdit && !travelMode;
     const banner = document.getElementById('day-banner');
     if (banner) {
@@ -2472,7 +2643,7 @@ function renderCheck() {
         <div class="flex items-center gap-3 bg-white p-4 rounded-2xl border border-pink-50">
             <input type="checkbox" ${c.done ? 'checked' : ''} onchange="trip.checklist[${i}].done=this.checked;save();renderCheck()" class="w-5 h-5 accent-pink-400">
             <span class="type-caption font-heavy ${c.done ? 'line-through opacity-30' : ''}">${escapeHtml(c.task)}</span>
-            ${isEdit && !travelMode ? `<button type="button" onclick="trip.checklist.splice(${i},1);save();renderCheck()" class="ml-auto text-red-200" aria-label="刪除此項目"><i class="fas fa-trash-alt"></i></button>` : ''}
+            ${canEditToolsContent() ? `<button type="button" onclick="trip.checklist.splice(${i},1);save();renderCheck()" class="ml-auto text-red-200" aria-label="刪除此項目"><i class="fas fa-trash-alt"></i></button>` : ''}
         </div>`,
                   )
                   .join('');
@@ -2498,7 +2669,7 @@ async function renderDocs() {
             </button>
             ${d.label ? `<span class="absolute bottom-2 left-2 right-2 type-micro font-heavy text-white drop-shadow-md truncate px-1 pointer-events-none">${escapeHtml(d.label)}</span>` : ''}
             <button type="button" onclick="togglePinDoc(${i})" class="doc-pin-btn${trip.pinnedDocIdx === i ? ' is-pinned' : ''}" aria-label="${trip.pinnedDocIdx === i ? '取消釘選' : '釘選到今日'}"><i class="fas fa-thumbtack"></i></button>
-            ${isEdit && !travelMode ? `<button type="button" onclick="removeDoc(${i})" class="absolute -top-1 -right-1 bg-red-400 text-white w-6 h-6 rounded-full type-micro border-2 border-white shadow" aria-label="刪除文件"><i class="fas fa-times"></i></button>` : ''}
+            ${canEditToolsContent() ? `<button type="button" onclick="removeDoc(${i})" class="absolute -top-1 -right-1 bg-red-400 text-white w-6 h-6 rounded-full type-micro border-2 border-white shadow" aria-label="刪除文件"><i class="fas fa-times"></i></button>` : ''}
         </div>`;
                 }
                 return `
@@ -2506,7 +2677,7 @@ async function renderDocs() {
             <img src="${escapeAttr(url)}" alt="${escapeAttr(d.label || '文件')}" class="w-full aspect-square object-cover rounded-3xl border-2 border-white shadow-md" onclick='showBig(${JSON.stringify(d.url)})'>
             ${d.label ? `<span class="absolute bottom-2 left-2 right-2 type-micro font-heavy text-white drop-shadow-md truncate px-1">${escapeHtml(d.label)}</span>` : ''}
             <button type="button" onclick="togglePinDoc(${i})" class="doc-pin-btn${trip.pinnedDocIdx === i ? ' is-pinned' : ''}" aria-label="${trip.pinnedDocIdx === i ? '取消釘選' : '釘選到今日'}"><i class="fas fa-thumbtack"></i></button>
-            ${isEdit && !travelMode ? `<button type="button" onclick="removeDoc(${i})" class="absolute -top-1 -right-1 bg-red-400 text-white w-6 h-6 rounded-full type-micro border-2 border-white shadow" aria-label="刪除文件"><i class="fas fa-times"></i></button>` : ''}
+            ${canEditToolsContent() ? `<button type="button" onclick="removeDoc(${i})" class="absolute -top-1 -right-1 bg-red-400 text-white w-6 h-6 rounded-full type-micro border-2 border-white shadow" aria-label="刪除文件"><i class="fas fa-times"></i></button>` : ''}
         </div>`;
             })
             .join('') || '<p class="col-span-2 text-center type-caption text-muted py-10 font-heavy">尚無文件（可上傳圖片或 PDF）</p>';
@@ -2681,10 +2852,7 @@ async function delDay(i) {
     const dayLabel = trip.startDate ? formatBannerDayLabel(trip, trip.itinerary[i], i) : trip.itinerary[i].date;
     if (!(await modalConfirm('刪除此天', `確定刪除「${dayLabel}」？景點與圖片將一併移除。`, { danger: true, confirmText: '刪除' }))) return;
     const day = trip.itinerary[i];
-    if (isIdbRef(day.img)) await deleteImageRef(day.img);
-    for (const ev of day.events) {
-        if (isIdbRef(ev.img)) await deleteImageRef(ev.img);
-    }
+    await cleanupDayImages(day);
     trip.itinerary.splice(i, 1);
     const nextIdx = Math.min(i, trip.itinerary.length - 1);
     invalidateWeatherForecast();
@@ -2747,6 +2915,10 @@ async function setTab(t) {
     document.getElementById('nav-today').className = `${navBase} ${t === 'today' ? 'nav-tab-active' : 'text-muted'}`;
     updateFabVisibility();
     syncEditChrome();
+    if (t === 'tools') {
+        renderCheck();
+        renderDocs();
+    }
     if (typeof syncToolsLayout === 'function') syncToolsLayout();
     if (t === 'today' && typeof renderTravelDashboard === 'function') renderTravelDashboard();
     else if (typeof stopDashboardCountdownTimer === 'function') stopDashboardCountdownTimer();

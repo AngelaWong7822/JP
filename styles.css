@@ -1368,23 +1368,22 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
 
 @media (max-width: 480px) {
     .itinerary-sticky-bar-edit {
-        flex-wrap: wrap;
-        align-items: stretch;
+        flex-wrap: nowrap;
+        align-items: center;
     }
 
     .itinerary-sticky-bar-edit .itinerary-edit-actions {
-        flex: 1 1 100%;
-        width: 100%;
+        flex: 1 1 auto;
+        min-width: 0;
     }
 
     .itinerary-sticky-bar-edit .itinerary-sticky-tools {
-        width: 100%;
-        justify-content: flex-end;
+        flex-shrink: 0;
     }
 
     .itinerary-edit-action {
         font-size: var(--type-micro);
-        padding: 0.5rem 0.4rem;
+        padding: 0.5rem 0.35rem;
     }
 }
 
@@ -1453,6 +1452,75 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
     font-size: var(--type-body);
     font-weight: 800;
     color: var(--text-secondary);
+}
+
+.day-banner-place {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 100%;
+    margin: 0.45rem 0 0;
+    padding: 0 0.15rem;
+    font-size: var(--type-caption);
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.35;
+}
+
+.day-banner-place i {
+    flex-shrink: 0;
+    color: var(--cute-pink);
+    font-size: 0.85rem;
+}
+
+.day-banner-place span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.day-banner-weather {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.55rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--border-soft);
+    font-size: var(--type-caption);
+    font-weight: 800;
+    color: var(--text-secondary);
+    line-height: 1.2;
+}
+
+.day-banner-weather-icon {
+    display: inline-flex;
+    align-items: center;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.day-banner-weather-temp {
+    color: var(--text-primary);
+    font-weight: 900;
+}
+
+.day-banner-weather-mood {
+    color: var(--text-muted);
+    font-size: var(--type-micro);
+    font-weight: 800;
+}
+
+.day-banner-weather-mood::before {
+    content: '·';
+    margin-right: 0.3rem;
+    color: var(--border-default);
+}
+
+[data-theme='dark'] .day-banner-weather {
+    background: rgba(0, 0, 0, 0.22);
 }
 
 .day-banner-today-mark {
@@ -2171,9 +2239,39 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
     line-height: 1.4;
 }
 
-#trip-schedule-bar input[type='date'],
-#trip-schedule-bar input[type='number'] {
+.trip-schedule-dates {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.5rem 0.65rem;
+}
+
+.trip-schedule-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1 1 8.5rem;
+    min-width: 0;
+}
+
+.trip-schedule-label {
     font-size: var(--type-caption);
+    font-weight: 800;
+    color: var(--text-secondary);
+}
+
+.trip-schedule-date {
+    width: 100%;
+    font-size: var(--type-caption);
+}
+
+.trip-schedule-sep {
+    flex-shrink: 0;
+    padding-bottom: 0.65rem;
+}
+
+#trip-schedule-bar input[type='date']:disabled {
+    opacity: 0.45;
 }
 
 #search-results {
@@ -2567,7 +2665,68 @@ body.travel-mode-on { --accent-soft: #ffe4ec; }
 
 #event-status-picker.hidden,
 #event-edit-picker.hidden,
-#tools-advanced-menu.hidden { display: none; }
+#tools-advanced-menu.hidden,
+#print-preview.hidden { display: none; }
+
+.print-preview {
+    position: fixed;
+    inset: 0;
+    z-index: 195;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+}
+
+.print-preview-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: calc(env(safe-area-inset-top, 0px) + 0.5rem) 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--surface);
+    flex-shrink: 0;
+}
+
+.print-preview-title {
+    flex: 1;
+    text-align: center;
+    font-weight: 800;
+    font-size: var(--type-caption);
+    color: var(--text-primary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.print-preview-back,
+.print-preview-print {
+    min-height: var(--touch-min);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-btn);
+    font-size: var(--type-caption);
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.print-preview-back {
+    background: var(--bg-muted, #f3f4f6);
+    color: var(--text-secondary);
+}
+
+.print-preview-print {
+    background: var(--cute-pink);
+    color: #fff;
+}
+
+.print-preview-frame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #fff;
+}
 
 #event-status-picker .sheet,
 #event-edit-picker .sheet,
